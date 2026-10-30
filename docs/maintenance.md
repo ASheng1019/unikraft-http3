@@ -59,7 +59,7 @@ libslirp 的 TIME_WAIT 候选也暂缓：本地 ISN 选择、旧重复报文隔�
 
 ## 后续提交给哪些仓库
 
-- `unikraft/` 的两项前置修改 → 跟进既有 [#1875](https://github.com/unikraft/unikraft/pull/1875) / [#1876](https://github.com/unikraft/unikraft/pull/1876)：前者比较备选方案，后者 native hunk 完全重合，不再开重复 PR。
+- `unikraft/` 的两项前置修改 → 跟进既有 [#1875](https://github.com/unikraft/unikraft/pull/1875) / [#1876](https://github.com/unikraft/unikraft/pull/1876)：前者优先验证并采用原方案，后者 native hunk 完全重合，不再开重复 PR。
 - 八个已有 port（musl、lwip、libcxx、libcxxabi、libunwind、openssl、c-ares、zlib）→ 各自 unikraft/lib-* 仓库。
 - 新 port（ngtcp2、nghttp3、nghttp2、libev、nghttpx）→ 申请/确认对应 port 仓库后分别提交。
 - 应用、部署及跨库测试 → 应用/catalog 或相应 CI；具体承载形式与维护者确认。

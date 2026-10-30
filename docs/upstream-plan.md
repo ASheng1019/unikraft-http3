@@ -29,7 +29,7 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 
 | 本地内容 | 上游对象 | 建议动作与前提 |
 |---|---|---|
-| core ARM64 FPSIMD/Clang | [unikraft/unikraft #1875](https://github.com/unikraft/unikraft/pull/1875)、关联 #1873 | 已有同一问题的 PR。我们的局部汇编指令方案与其移除 `\|isr` 的方案不同；在原线程提供备选方案及测试，不新开竞争 PR |
+| core ARM64 FPSIMD/Clang | [unikraft/unikraft #1875](https://github.com/unikraft/unikraft/pull/1875)、关联 #1873 | 已有同一问题的 PR；当前 Clang19/O2/FPSIMD 配置下两方案指令比较等价。优先验证并采用原 PR，只有具体缺口才讨论增量，不新开竞争 PR |
 | core ARM64 枚举转换 | [unikraft/unikraft #1876](https://github.com/unikraft/unikraft/pull/1876)、关联 #1874 | native hunk 完全相同；原 PR 还修复 Xen。只提供验证，不再投稿同一修复 |
 | libc++ 21.1.8 | [unikraft/lib-libcxx #38](https://github.com/unikraft/lib-libcxx/pull/38) | 原升级作者 CristianAndrei1423；协作补上消费者配置隔离、包含顺序、getentropy 和归档元数据。后续新 PR 只保留我们的增量 |
 | libc++abi 21.1.8 | [unikraft/lib-libcxxabi #8](https://github.com/unikraft/lib-libcxxabi/pull/8) | 现有升级 PR；我们的增量主要是 hash/版本元数据，优先并入原作者工作，不另开很小的竞争 PR |
@@ -139,23 +139,27 @@ issue 的重点是可用性、已实现的边界、接收方式和协同；不�
 
 下面都是**尚未发送的评论**。保留可以给对方 cherry-pick 的小提交/分支，不能直接推其分支。
 
-### 5.1 core #1875：备选 FPSIMD 修复
+### 5.1 core #1875：优先复用原 PR 的验证反馈
 
 ```text
-I reproduced this ARM64/Clang build failure while integrating a native HTTP/3
-service. I have also tested a local alternative: keep ectx.c compiled with
-|isr / -mgeneral-regs-only, and explicitly enable the FP/SIMD instruction
-extensions inside its save/restore inline assembly blocks.
+I compared this change with the local FPSIMD assembly workaround in our
+ARM64 HTTP/3 integration. The function-level __isr attributes remain in
+place even when the file-level |isr build variant is removed.
 
-That preserves the restriction on compiler-generated FP/SIMD while allowing
-this assembly to manipulate the saved FP/SIMD state. The complete ARM64
-service build and runtime regressions pass with this variant.
+With our current Clang19, -O2 and CONFIG_FPSIMD=y settings, both variants
+compile. After aligning diagnostic source line numbers, all five functions
+have identical instructions and relocation targets. I have not yet run the
+complete HTTP/3 image regressions with this PR replacing the local workaround.
 
-Would you prefer this approach within the existing PR? I can provide the
-small patch and focused reproduction. I have not opened a competing PR.
+I would prefer to consume your existing fix with its original attribution
+and validate that composition rather than maintain a parallel implementation.
 ```
 
-这只是局部指令许可，不能把它描述为已经证明所有中断上下文安全；需要原作者/维护者比较两种方案。
+本轮用实际 ectx.c 编译参数比较三种情况：原版 ISR 构建失败，本地方案和 PR 方案均可编译。
+本地汇编指令导致源码多四行，最初对象差异仅为诊断行号；用空行对齐后指令及重定位目标一致。
+这证明当前编译配置下的代码生成等价，不是所有编译器、优化配置及 LTO 的普遍证明。
+不应仅凭移除文件级 `|isr` 就断言现有 PR 丢失全部限制或不安全：函数级 `__isr` 仍在。
+完整镜像替换回归完成前，不把现有 PR 标为已完成应用层验证。当前固定运行源码尚未替换。
 
 ### 5.2 core #1876：完全重合的修复
 
