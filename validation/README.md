@@ -92,3 +92,44 @@ performance comparison or a universal compiler/LTO guarantee.
 The local performance-reference/ retains the earlier ports1/Linux VM study and
 its statistical limits. This refresh measures correctness and packaging, not
 performance; historical throughput/tail results are not relabeled as new data.
+
+## Reusable-port cleanup and policy separation (2026-10-30)
+
+Fresh outputs are under build/port-cleanup/. No upstream issue, PR or comment
+was posted. c-ares/zlib configuration, metadata, tests and documentation were
+made reusable; lwIP's production source is unchanged by its commit split.
+ngtcp2 and lwIP each have one deferred policy commit after a policy-free base.
+Exact submission endpoints are recorded in sources.lock.json/submission_series;
+the workspace gitlinks continue to pin the development composition.
+
+| Check | Result |
+|---|---|
+| c-ares standalone musl/IPv4 contract | PASS: public DNS parsing, truncated-response rejection, channel configuration and poll event-thread lifecycle; no forced IPv6 |
+| zlib standalone file and memory profiles | Both PASS: compression round trip, corrupt stream, CRC, gzip memory stream; gzip file write/read/EOF on RAMFS when enabled |
+| zlib file API selection | PASS: gzopen absent when disabled and present when enabled; compress2 retained; no legacy VFS/filesystem forced |
+| Policy-free ngtcp2 target suite | 266/266 PASS, 0 skipped; no custom PMTU patch or patch hook |
+| Independent nghttp3 suite | 61/61 PASS, 0 skipped |
+| Policy-free lwIP socket contracts | Metadata off/on: 40+40 address cases PASS; DF sendmsg/sendto errors PASS |
+| Development lwIP source selections | 10/10 PASS, original defaults retained and poll-only/deferred-RX exclusion preserved |
+| Development service empty-output build | PASS, Clang19/ARM64/FPSIMD, reusable c-ares/zlib profiles and retained policies |
+| Development service HTTP/3 regression | Complete 11/11 ordinary-image suites PASS, including real DNS, backend faults and repeated in-connection IPv4/IPv6 MTU transitions |
+| Policy boundaries | Base branches contain no custom PMTU/ACK implementation or configuration; each development policy is exactly one subsequent commit |
+
+The base protocol count differs from the historical development count of 297
+because the PMTU policy adds tests. Those extra tests are not presented as
+unmodified-upstream coverage. The independent OpenSSL helper probe was not
+rerun on the policy-free branch in this cleanup. Full HTTP/3 regressions above
+qualify the development composition, not the policy-free application profile;
+the custom cooldown/black-hole contract is deliberately absent from the latter.
+
+Run tests/run-library-contracts.py for standalone library contracts and
+tests/run-ports.py --libs-root for a separate base-port snapshot. Both use
+fresh output directories. Runtime checks used actual ARM64/QEMU KVM; no new
+performance comparison was performed. Separate EAGAIN/RX-flags injector images
+and native sanitizer suites were not rebuilt in this cleanup.
+
+The new c-ares cleanup commit has zero checkpatch errors and one reviewed
+split-string warning for the multiline test-result message. The zlib cleanup
+commit passes with the upstream API CamelCase diagnostic excluded; those names
+are zlib's public API. These checks do not replace the final complete-series
+checkpatch/CI required before upstream submission.

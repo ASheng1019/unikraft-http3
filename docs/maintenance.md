@@ -47,6 +47,36 @@ ACK 后释放响应存储、HTTP 后端背压属于上游已有实现，不归�
 PR 合并不会改变仍在使用的旧发行版，不能在合并当天直接删除旧版所需的回移补丁。
 如有上下文重叠，重基后续适配补丁；保留真正的平台改动并重新运行回归。
 
+### 通用 port 与投稿提交的整理
+
+c-ares 的“恢复”是恢复通用 resolver 的定位，不是退回 1.14.0 或恢复已删除的 newlib 路径。
+Config.uk 清除 QUIC 服务专用描述，明确 musl/socket ABI 及 time/poll/pipe/getrandom 需求，
+不强制 lwIP IPv6；Library.uk 保留版本/hash/许可证并补回源码仓库。其它 libc 仍未验证。
+独立 tests/contract 覆盖 channel、DNS 响应解析/截断、poll event-thread 生命周期；真实 DNS 场景继续由集成测试覆盖。
+
+zlib 补回完整 Library.uk，清除误拷 c-ares 的 README。内存 API 依赖 HAVE_LIBC，
+gz* 文件 API 由 LIBZLIB_GZFILE 控制，依赖 HAVE_VFS 且在可用时默认开启。
+不再由压缩库替应用强制选择旧 vfscore/ramfs/devfs。独立测试覆盖内存压缩/解压、坏数据、
+CRC、gzip 内存流，以及新 VFS 上的 gzip 文件往返；关闭文件支持时检查相应符号确实不存在。
+这些是直接维护在 port 的构建/配置与测试代码，不为它们生成第三方源码补丁。
+
+lwIP 原来虽已按补丁文件分组，但 Git 的一个约 3000 行组合提交还混合多个主题。
+现从 ec55ae1 重建投稿序列：目录版本化/固定源码与独立回移、UDP socket 契约、TCP readiness、
+RX dispatcher/校验分为独立逻辑提交；具体 PR 比较范围见 upstream-plan.md 第 8.1 节。
+提交拆分前后的生产源码完全相同，只有 README 更新；四项已有上游回移的来源继续保留。
+
+首轮投稿只到以下基础终点。开发组合在其后各保留一个策略提交，策略不随首轮 PR：
+
+| Port | 首轮投稿终点 | 后续策略分支 |
+|---|---|---|
+| lib-lwip | dev/lwip-native-integration（d6cf36b，无 ACK deadline） | dev/lwip-ack-deadline（b20ebaf） |
+| lib-ngtcp2 | dev/ngtcp2-base-port（1b95dc9，无 PMTU 补丁及 hook） | dev/ngtcp2-pmtu-recovery（0b3dc4a） |
+
+每个基础到策略分支的差异恰好一个提交，完整 OID 记录在 sources.lock.json。
+根工作区 gitlink 仍固定开发组合，以保留已验证的部署配置；不能把该累计分支直接作为首轮 PR。
+ngtcp2 的 Quinn 许可、来源说明、策略补丁和应用规则一起留在策略提交中，基础分支不携带这些文件。
+已有主线 common 补丁（包括 TIME_WAIT 处理）保持原行为，不被算作本次新策略。
+
 ## 暂缓的工作
 
 ngtcp2 的 PMTU 黑洞恢复是策略提案：有/无 ACK 恢复、回退后确认、60秒冷却和600秒再搜索，

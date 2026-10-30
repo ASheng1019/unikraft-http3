@@ -140,6 +140,7 @@ must be new directories outside the source repositories.
 
 ```sh
 python3 tests/run-ports.py --core "$CORE" --output "$PORT_TEST_OUTPUT"
+python3 tests/run-library-contracts.py --core "$CORE" --output "$LIBRARY_TEST_OUTPUT"
 python3 tests/test-lwip-selection.py --core "$CORE" --output "$LWIP_CONFIG_OUTPUT"
 python3 tests/test-runtime-selection.py --core "$CORE" --output "$CXX_CONFIG_OUTPUT"
 python3 tests/run-socket-contracts.py --core "$CORE" --output "$SOCKET_TEST_OUTPUT"
@@ -163,6 +164,12 @@ backports in the owning port. See [maintenance](docs/maintenance.md) for PRs,
 versions, directory purposes and removal rules. Native regression runners are
 in tests/upstream/. Builds use release archives and never depend on forks/.
 
+c-ares and zlib have independent public-API applications in their own
+tests/contract directories. c-ares declares its musl/socket/POSIX profile without
+forcing IPv6. zlib exposes memory APIs with HAVE_LIBC; optional LIBZLIB_GZFILE
+adds file APIs when HAVE_VFS is available, leaving filesystems/mounts to the app.
+The contract runner tests c-ares and both zlib profiles without nghttpx.
+
 ## Contribution boundaries
 
 Prepare separate changes for each lib repository, the application/catalog,
@@ -172,6 +179,14 @@ Do not submit this entire workspace to core. The local candidate lib-nghttpx nam
 repository still require agreement. Preserve the authorship of the reused
 LLVM/OpenSSL ports and Quinn attribution. Personal repository publication preserves original histories and signed-off fixes.
 Upstream CI, maintainer agreement and policy acceptance remain submission steps.
+
+The workspace pins the measured development composition. Initial submission
+branches exclude behavior-policy commits: lib-lwip's dev/lwip-native-integration
+has no independent ACK deadline; lib-ngtcp2's dev/ngtcp2-base-port has no custom
+PMTU recovery. Each policy is one separate final commit on its development
+branch. sources.lock.json records both endpoints under submission_series.
+Use run-ports.py --libs-root to qualify a separate snapshot of the base ports;
+the unmodified ngtcp2 transport has 266 tests, versus 297 with the policy patch.
 
 Current build and regression commands/results are described in
 [validation/README.md](validation/README.md). The retained Linux VM comparison

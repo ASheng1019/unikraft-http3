@@ -209,5 +209,21 @@
   "qualification_architecture": "aarch64/QEMU KVM",
   "policy": "Source archive/provenance lock. Exact development checkouts are pinned by workspace Git submodules; candidate ports and upstream proposals are not accepted upstream.",
   "delivery_version": "quic-h3-arm64",
-  "version_policy": "Fixed releases with one removable backport per upstream fix; PR/commit provenance is recorded in the patch header."
+  "version_policy": "Fixed releases with one removable backport per upstream fix; PR/commit provenance is recorded in the patch header.",
+  "submission_series": {
+    "lib-lwip": {
+      "base_branch": "dev/lwip-native-integration",
+      "base": "d6cf36b1b99804988b7d587f5ef4a272efbddc1a",
+      "policy_branch": "dev/lwip-ack-deadline",
+      "policy": "b20ebaf131ab15748bb38e06e4d8f27051a56ffd",
+      "policy_commits": 1
+    },
+    "lib-ngtcp2": {
+      "base_branch": "dev/ngtcp2-base-port",
+      "base": "1b95dc975271a4bd56932ab579335a47965ee7c5",
+      "policy_branch": "dev/ngtcp2-pmtu-recovery",
+      "policy": "0b3dc4a6a3043cba531c2b353df57be8cea6182a",
+      "policy_commits": 1
+    }
+  }
 }

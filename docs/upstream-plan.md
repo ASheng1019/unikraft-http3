@@ -35,11 +35,11 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 | libc++abi 21.1.8 | [unikraft/lib-libcxxabi #8](https://github.com/unikraft/lib-libcxxabi/pull/8) | 现有升级 PR；我们的增量主要是 hash/版本元数据，优先并入原作者工作，不另开很小的竞争 PR |
 | libunwind 21.1.8 | [unikraft/lib-libunwind #13](https://github.com/unikraft/lib-libunwind/pull/13) | 同上 |
 | OpenSSL 3.5.x | [unikraft/lib-openssl #12](https://github.com/unikraft/lib-openssl/pull/12) | 现有 3.5.7 升级 PR；先协调版本/构建清单，ARM64 生成规则与能力分派作为独立增量；不得重新署名整个升级 |
-| lwIP 版本及 socket 集成 | [unikraft/lib-lwip](https://github.com/unikraft/lib-lwip) | 分批：版本化与固定 2.2.1 → socket 正确性/能力 → RX 交接 → 可选 ACK deadline；不提交整个开发分支作为单一 PR |
-| c-ares 1.34.9 | [unikraft/lib-c-ares](https://github.com/unikraft/lib-c-ares) | 投稿前恢复通用 port 的描述和配置边界；明确旧配置迁移。当前 branch 不是单纯版本 bump |
-| zlib 1.3.2 | [unikraft/lib-zlib](https://github.com/unikraft/lib-zlib) | 投稿前补回 Library.uk 元数据、清除误拷的 c-ares README、说明 libc/VFS 配置变化并补直接 API 测试 |
+| lwIP 版本及 socket 集成 | [unikraft/lib-lwip](https://github.com/unikraft/lib-lwip) | 已整理为版本/回移、UDP socket、TCP readiness、RX 交接/校验四个投稿单元；ACK deadline 单独留在最后一个策略提交，不随首轮 PR |
+| c-ares 1.34.9 | [unikraft/lib-c-ares](https://github.com/unikraft/lib-c-ares) | 已恢复通用 resolver 描述和元数据，显式声明 musl/socket/POSIX 能力；不恢复失效 newlib 或强制 IPv6。独立 API/线程和真实 DNS 验证通过 |
+| zlib 1.3.2 | [unikraft/lib-zlib](https://github.com/unikraft/lib-zlib) | 已补全 Library.uk，修正 README；HAVE_LIBC + 可选 gzip 文件 API，不强制 VFS/挂载。内存/流式 gzip/文件 API 独立验证通过 |
 | musl 1.2.3 下载 hash | [unikraft/lib-musl](https://github.com/unikraft/lib-musl) | 不是新版本移植。可随该 port 的维护工作提交；无需为 hash 单独开协调 issue。当前新增 URL 被后文同名赋值覆盖，应先去除冗余 |
-| ngtcp2 port | 候选 `unikraft/lib-ngtcp2` | 官方仓库尚不存在，先通过协调 issue 确认。先投基础 transport/可选 TLS helper；当前默认携带的 PMTU 策略必须从首版投稿分支移出或经明确同意独立选择 |
+| ngtcp2 port | 候选 `unikraft/lib-ngtcp2` | 官方仓库尚不存在，先通过协调 issue 确认。基础分支 dev/ngtcp2-base-port 已移除 PMTU 策略及 patch hook，266 项 transport 目标测试通过；策略只在独立后续提交 |
 | nghttp3 port | 候选 `unikraft/lib-nghttp3` | 同上；基础库不修改上游协议实现，独立验证 |
 | nghttp2 C-library port | 候选 `unikraft/lib-nghttp2` | 同上；只包含 C 库及私有符号隔离，不混入 nghttpx 服务适配 |
 | libev port | 候选 `unikraft/lib-libev`，名称待确认 | 同上；poll/epoll 及计时器能力如实声明 |
@@ -65,24 +65,22 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 4. nghttpx 截断输入可并行作为独立通用正确性 PR；与 Unikraft 新 port 审批无必然先后关系。
 5. 优先推进独立 nghttp3、ngtcp2 基础 port、libev/nghttp2，以及各依赖 port 的通用维护。
    ngtcp2 首版基础库不依赖 nghttpx；TLS helper 等待兼容的 OpenSSL 增量。
-6. 分批推进 lwIP socket/RX 能力；正确性和能力不与 ACK50ms 策略绑定。
+6. 分批推进 lwIP socket/RX 能力；首轮投稿止于 dev/lwip-native-integration，不包含 ACK deadline。
 7. 依赖和承载方式明确后，提交 nghttpx 服务、native 应用和适合上游 CI 的集成子集。
 8. PMTU 恢复和 ACK deadline 等策略另开讨论；libslirp 候选继续留在个人实验分支。
 
 个人仓库发布完成，**不等于当前所有开发分支已经可直接创建上游 PR**。具体需要：
 
-- 首版 ngtcp2 基础投稿去掉自研 PMTU 默认补丁；重跑不含补丁的套件。
-  当前 297 项目标测试包含携带的策略，不能将这个数字直接写成“未修改上游基础库”的成绩。
+- 已建立无 PMTU 补丁的 ngtcp2 基础投稿分支，独立目标套件为 266/266。
+  开发组合的 297 项包含策略新增测试，两者分开记录，不能混用。
 - libc++/OpenSSL 投稿基点应为原贡献者 PR 或合并后的主线，只展示我们的后续差异。
   libc++ 需要把消费者配置修复、随机源适配和元数据整理为有意义的提交。
-- c-ares/zlib 的 Kconfig 当前写着 “pinned QUIC service dependency” 且限定 musl，原有选项发生变化。
-  要与维护者明确兼容范围，并恢复通用库表述，不能把这些差异隐藏在升级标题下。
-  zlib/Library.uk 当前只有 SPDX；该问题是投稿阻塞项。
-  两个 port 的 COPYING/原作者通知要保持，避免无关的版权头与文档重写。
-- zlib 需要直接的压缩/解压和文件 API 回归；HTTP/3 可运行不证明所有 zlib API 都被覆盖。
-  c-ares 已有 DNS 成功、丢包和 NXDOMAIN 集成测试，仍需按一般库配置补验证。
-- lwIP 需要从当前组合提交分离版本迁移、socket 能力、RX 正确性和 ACK 时序策略。
-  patch 文件已按归属区分，但 Git 投稿提交仍较大，不是仅重命名即可直接投。
+- c-ares/zlib 已清除服务专用描述并补齐元数据与独立契约测试。c-ares 保留已验证的 musl ABI 限制，
+  明确替换旧 newlib/强制 IPv6 配置；zlib 保留 HAVE_LIBC 接口边界，将 gz* 文件 API 作为依赖 HAVE_VFS 的选项。
+  不承诺未测试 libc；原作者历史及上游许可证保留。正式投稿需说明配置迁移。
+- lwIP 已从固定上游基线重建为可评审提交序列，四项独立上游回移仍逐项保留来源。
+  无 ACK 策略的投稿终点通过独立 socket 验证；各单元与前一单元的关系见第 8.1 节。
+  现有开发组合仅 README 改变，源码保持等价；不把整个开发策略分支提交上游。
 - OpenSSL 需要评审生成清单维护、现有 core hwcap 接口是否可复用，以及其他架构的构建回归。
   当前 ARM64 检测/降级测试不等于已经验证全部支持架构。
 - nghttpx 的全镜像 clock wrappers、IPv6 netif 初始化位置、部署控制接口和单 worker 限制需明确给维护者。
@@ -90,7 +88,8 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 - 正式投稿前运行目标仓库要求的 checkpatch/CI，并核对新主线；本文不将未运行的检查标为完成。
   新官方仓库未建立前，不能向不存在的仓库创建 PR。
 
-这些是后续投稿分支的工作，不在本次悄悄改动已经验证的运行版本。
+上面标为已完成的整理已经落实到独立分支；其余仍是投稿前的检查项。固定运行版本继续显式包含
+已测量的策略提交，首轮投稿分支排除它们；两种组合分开构建、验证和记录。
 
 ## 4. 首个协调 issue：完整英文草稿
 
@@ -286,15 +285,15 @@ Expose the upstream experimental OpenSSL helper as a separate optional library r
 a compatible OpenSSL 3.5+ port; the transport-only library does not need TLS
 or nghttpx.
 
-The initial base-port submission will not include the development branch's
-provisional PMTU black-hole recovery policy. That policy requires separate
-upstream discussion.
+The base-port branch contains no provisional PMTU black-hole recovery patch
+or patch hook. That policy is retained as one separate follow-up commit and
+requires independent upstream discussion.
 
-The existing development composition passes ARM64 target tests and an
-independent entropy/time, 32-lifecycle and crypto/token probe. Before this
-PR is submitted, the base-port branch without the PMTU patch must be rebuilt
-and independently revalidated. The current 297-test result includes that
-patch and must not be presented as the unmodified base suite count.
+The base transport passes all 266 upstream tests on ARM64/QEMU KVM. The
+development policy composition has 297 tests and is recorded separately.
+The optional OpenSSL helper has prior independent entropy/time, 32-lifecycle
+and crypto/token validation in the development composition; that is not a
+claim that the helper probe was rerun on this base-port branch.
 ```
 
 ### 7.3 nghttp2 C 库
@@ -416,36 +415,47 @@ actual IPv4 DF packets, dual-stack metadata and socket copy/error contracts.
 This adapter does not emulate Linux's PMTU cache.
 ```
 
-**PR C 标题：Preserve socket readiness and defer RX status work safely**
+**PR C 标题：Refresh persistent TCP readiness after partial receives**
 
 ```text
-Preserve persistent socket eventpoll readiness and hand RX-status work to the
-configured dispatcher instead of recursively scheduling work on the TCP/IP
-thread. Keep poll-only mode separate and validate software RX checksums at
-the device boundary.
-
-Exercise repeated backend traffic, failure handling and checksum rejection.
-This contribution changes the Unikraft adapter, not QUIC congestion control
-or application pacing. The final series should separate readiness and device
-handoff commits even if reviewed together as one receive-path topic.
+Refresh the Unikraft socket readiness level after lwIP updates lastdata.
+Retained TCP bytes must remain readable, and draining the last pbuf must clear
+readability without waiting for another packet. Keep this correctness change
+separate from ACK scheduling policy.
 ```
 
-**PR D 标题：Add an opt-in independent TCP ACK deadline** — 先讨论，后投实现。
+**PR D 标题：Defer status-callback RX work and verify wire checksums**
 
 ```text
-The HTTP/3-to-TCP proxy workload exposes ACK timing coupled to coarse periodic
-TCP timer processing. Propose a separately scheduled ACK deadline, with the
-existing behavior retained by default. The measured application selects
-50 ms; that value is not proposed as a universal lwIP default.
-
-Before implementation review, agree on timer ownership, serialization,
-cancellation and interaction with the existing TCP timers. Provide workload
-and packet-timing evidence separately from the basic HTTP/3 port.
+Hand status-callback RX work to the configured dispatcher instead of queuing
+packets recursively into tcpip_thread's own mailbox. Preserve poll-only mode.
+Verify complete incoming packet checksums because this adapter does not
+consume checksum-offload metadata. Partial-checksum/GSO input is unsupported.
 ```
 
-B 使用 A 的对应补丁基线。C 可拆成独立正确性提交；D 不应阻塞 A/B/C。
-source patch 的通用性还要逐项确认：可复用的 lwIP 功能未来可以与 lwIP 上游讨论，
-Unikraft 的事件/设备接口仍留在 port。不要把所有 native/ 内容都称为已获 lwIP 接受的修复。
+**暂缓策略：Add an opt-in independent TCP ACK deadline**
+
+仅保留在一个独立后续提交中，不进入 A–D 的任何 PR。默认关闭，开发应用继续选择 50ms；
+以后讨论计时器所有权、取消与现有 TCP timers 的关系，再决定投稿。
+ngtcp2 PMTU 策略同样保留为基础 port 之后的独立提交。
+
+本地可复核的投稿单元如下；它们按依赖叠放，不能对上游默认分支直接使用整段累计 diff：
+
+| 单元 | 比较范围（lib-lwip 内） | 内容 |
+|---|---|---|
+| A | ec55ae1..8935f6f | 补丁目录版本化、固定源码、2.2.1 ABI 兼容、四项独立正确性回移及 2.1 recvmsg 对齐 |
+| B | 8935f6f..3c4e35d | 地址复制边界、UDP ancillary data、DF/EMSGSIZE，三个逻辑提交 |
+| C | 3c4e35d..a34ae8c | 持久 TCP readiness，一个提交 |
+| D | a34ae8c..d6cf36b | RX dispatcher、软件校验，各一个提交及配套说明 |
+| 暂缓 | d6cf36b..b20ebaf | ACK deadline，一个独立策略提交，首轮排除 |
+
+A 的固定源码终点另有 dev/lwip-pinned-releases；包含回移的 A 终点为
+dev/lwip-release-backports。B、C 和 D 的终点分别为 dev/lwip-udp-socket-contracts、
+dev/lwip-tcp-readiness、dev/lwip-native-integration。完整提交号记录在 sources.lock.json
+及个人仓库；历史大提交仍可追溯，但不再作为投稿序列使用。
+
+已在 Unikraft 原基线存在的 common/ TIME_WAIT 处理保持原样；不能把保留旧行为称为新引入的策略。
+可复用的 lwIP 功能未来仍可与 lwIP 上游讨论，Unikraft 设备/事件接口留在 port。
 
 ### 8.2 lib-c-ares
 
@@ -457,8 +467,10 @@ using a pinned verified archive. The intended contribution is a reusable DNS
 resolver port; the nghttpx workload is one consumer rather than its API scope.
 
 The current integration covers DNS resolution, dropped replies and NXDOMAIN.
-Before submission, normalize the service-specific Kconfig wording, document
-libc compatibility changes and validate the resulting general port profile.
+Use a generic resolver configuration with explicit musl ABI, socket, time,
+poll, pipe and entropy requirements. Do not restore the removed newlib path
+or force IPv6. Standalone DNS parsing/truncation, channel configuration and
+poll event-thread lifecycle contracts pass without nghttpx.
 ```
 
 ### 8.3 lib-zlib
@@ -470,10 +482,11 @@ Build zlib 1.3.2 from a pinned verified archive and refresh the source/config
 rules. Preserve the library's general-purpose interface and record complete
 Library.uk metadata and the original licensing notices.
 
-Before submission, remove the service-specific configuration wording, explain
-any libc/VFS dependency changes, and add direct compression/decompression and
-file-API regressions. Successful HTTP/3 linking alone does not validate those
-APIs. The current development branch needs this cleanup before becoming a PR.
+Require HAVE_LIBC for the memory APIs and offer gzip file I/O separately
+when HAVE_VFS is available. Leave the filesystem and mounts to the application.
+Standalone tests pass for memory compression/decompression, corrupted input,
+CRC, gzip-format streaming and gzip-file round trips. The memory-only profile
+also verifies that gz* file symbols are absent while compress2 remains.
 ```
 
 ### 8.4 lib-musl 与 runtime 元数据
