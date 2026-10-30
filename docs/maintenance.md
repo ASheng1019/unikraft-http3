@@ -2,11 +2,11 @@
 
 ## 目录各自负责什么
 
-- `unikraft/`：Unikraft core 原始 Git 仓库，保留两项本地 ARM64 前置修改；现已确认关联既有 #1875/#1876，不作为两项新投稿。
+- `unikraft/`：Unikraft core 原始 Git 仓库，采用既有 ARM64 PR #1875/#1876 的原方案，已替换两项重复实现；不作为新投稿。
 - `libs/`：各 external-library port；Config.uk、Makefile.uk、平台 glue 直接维护在各 port。
 - `app-nghttpx/`：薄应用入口、Kraftfile、部署配置。
 - `forks/`：nghttp2、lwIP、ngtcp2、libslirp 的独立 Git 开发仓库。用于维护通用修复和回应上游评审，不是构建输入。
-- `core-patches/`：从当前 core 修改导出的两项前置补丁，供 setup-core.sh 的主线基线重建使用。
+- `core-patches/`：从两个原作者 PR 的集成提交导出的有序前置补丁，供 setup-core.sh 在固定主线基线上以 git am 重建，保留作者与来源。
 - `tests/`：HTTP/3、socket、PMTU 等集成测试；`tests/upstream/` 是独立上游修复的原生回归。
 - `tools/`、`cache/`、`build/`：本地工具、下载归档和可再生成的构建/测试输出，不提交给 port 仓库。
 - `validation/`：当前验证说明和唯一保留的 Linux VM 性能对照。
@@ -59,13 +59,20 @@ libslirp 的 TIME_WAIT 候选也暂缓：本地 ISN 选择、旧重复报文隔�
 
 ## 后续提交给哪些仓库
 
-- `unikraft/` 的两项前置修改 → 跟进既有 [#1875](https://github.com/unikraft/unikraft/pull/1875) / [#1876](https://github.com/unikraft/unikraft/pull/1876)：前者优先验证并采用原方案，后者 native hunk 完全重合，不再开重复 PR。
+- `unikraft/` 的两项前置修改 → 已采用既有 [#1875](https://github.com/unikraft/unikraft/pull/1875) / [#1876](https://github.com/unikraft/unikraft/pull/1876)：保留 Cristian Andrei 的作者身份、原始 Signed-off-by 和 cherry-pick 来源，不再开重复 PR。原 PR 的 Xen hunk 一并保留，但不宣称 Xen 运行验证。
 - 八个已有 port（musl、lwip、libcxx、libcxxabi、libunwind、openssl、c-ares、zlib）→ 各自 unikraft/lib-* 仓库。
 - 新 port（ngtcp2、nghttp3、nghttp2、libev、nghttpx）→ 申请/确认对应 port 仓库后分别提交。
 - 应用、部署及跨库测试 → 应用/catalog 或相应 CI；具体承载形式与维护者确认。
 - 此工作区本身、forks、工具、归档及本机生成日志不整体提交给 Unikraft core。
 
 LLVM/OpenSSL port 延续原贡献者工作，保留原历史、署名和许可证。
+
+core 当前分支为 `dev/arm64-clang-prerequisites`，基于固定的 `359307a2a4cc9c1feb22683d841650902b799e4d`。
+原 PR 提交 `537e08f01d5aea34115e745f850545148d070b73` 和
+`518274cf00c93f1d0e1c4902060a09ed8aeba169` 以 `cherry-pick -x -s` 集成，
+两项 patch-id 与原提交逐一相同，具体集成提交见 sources.lock.json 和工作区 gitlink。
+`ectx.c` 已恢复主线原文；编译调整使用原 PR 的文件级规则，函数级 `__isr` 保留。
+两项 PR 仍未合并；固定 core 基线实际包含修复后，再移除已被覆盖的前置补丁。
 
 ## 2026-10-30 发布布局审查
 

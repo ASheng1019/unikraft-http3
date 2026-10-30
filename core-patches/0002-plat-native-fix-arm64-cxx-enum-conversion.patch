@@ -1,0 +1,50 @@
+From 20fd3975606e4fe4ab7e56796de2d7a35fa312f4 Mon Sep 17 00:00:00 2001
+From: Cristian Andrei <cristian.andrei1423@gmail.com>
+Date: Sat, 25 Jul 2026 15:52:07 +0300
+Subject: [PATCH] plat/native: Fix arm64 build error for cpp apps
+
+Builds of C++ apps for ARM64 fail. The ARM64 wrapper passes an int
+to a function whose parameter is an enum. C performs the int to
+enum conversion implicitly, but C++ does not, so the build fails.
+
+Fix by explicitly making the conversion from int to enum.
+
+Signed-off-by: Cristian Andrei <cristian.andrei1423@gmail.com>
+(cherry picked from commit 518274cf00c93f1d0e1c4902060a09ed8aeba169)
+Signed-off-by: Sheng <hsdai22@m.fudan.edu.cn>
+---
+ plat/native/pal/arch/arm64/include/uk/plat/pal/arch/except.h | 3 ++-
+ plat/xen/arch/arm64/include/uk/plat/xen/arch/except.h        | 3 ++-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/plat/native/pal/arch/arm64/include/uk/plat/pal/arch/except.h b/plat/native/pal/arch/arm64/include/uk/plat/pal/arch/except.h
+index 0d2cad5a5..4f4c8f29b 100644
+--- a/plat/native/pal/arch/arm64/include/uk/plat/pal/arch/except.h
++++ b/plat/native/pal/arch/arm64/include/uk/plat/pal/arch/except.h
+@@ -41,7 +41,8 @@ __isr static inline void
+ uk_pal_arm64_except_err_ctx_set_eid(struct uk_pal_except_err_ctx *ctx, int eid)
+ {
+ 	uk_plat_native_arm64_except_err_ctx_set_eid(
+-		(struct uk_plat_native_except_err_ctx *)ctx, eid);
++		(struct uk_plat_native_except_err_ctx *)ctx,
++		(enum uk_plat_native_arm64_except_id)eid);
+ }
+ 
+ __isr static inline __u64
+diff --git a/plat/xen/arch/arm64/include/uk/plat/xen/arch/except.h b/plat/xen/arch/arm64/include/uk/plat/xen/arch/except.h
+index 69f3b49bb..dbfe12447 100644
+--- a/plat/xen/arch/arm64/include/uk/plat/xen/arch/except.h
++++ b/plat/xen/arch/arm64/include/uk/plat/xen/arch/except.h
+@@ -54,7 +54,8 @@ void uk_plat_xen_arm64_except_err_ctx_set_eid(
+ 	struct uk_plat_xen_except_err_ctx *ctx, int eid)
+ {
+ 	uk_plat_native_arm64_except_err_ctx_set_eid(
+-		(struct uk_plat_native_except_err_ctx *)ctx, eid);
++		(struct uk_plat_native_except_err_ctx *)ctx,
++		(enum uk_plat_native_arm64_except_id)eid);
+ }
+ 
+ __isr static inline
+-- 
+2.43.0
+

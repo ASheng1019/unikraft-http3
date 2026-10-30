@@ -1,7 +1,23 @@
 {
   "unikraft": {
     "url": "https://github.com/unikraft/unikraft.git",
-    "commit": "359307a2a4cc9c1feb22683d841650902b799e4d"
+    "commit": "359307a2a4cc9c1feb22683d841650902b799e4d",
+    "prerequisites": [
+      {
+        "pr": "https://github.com/unikraft/unikraft/pull/1875",
+        "commit": "537e08f01d5aea34115e745f850545148d070b73",
+        "integrated_commit": "7c08cf268f51c4f99b56061442cde354295aae15",
+        "author": "Cristian Andrei <cristian.andrei1423@gmail.com>",
+        "patch": "core-patches/0001-plat-native-fix-arm64-clang-build.patch"
+      },
+      {
+        "pr": "https://github.com/unikraft/unikraft/pull/1876",
+        "commit": "518274cf00c93f1d0e1c4902060a09ed8aeba169",
+        "integrated_commit": "20fd3975606e4fe4ab7e56796de2d7a35fa312f4",
+        "author": "Cristian Andrei <cristian.andrei1423@gmail.com>",
+        "patch": "core-patches/0002-plat-native-fix-arm64-cxx-enum-conversion.patch"
+      }
+    ]
   },
   "ports": [
     {

@@ -29,8 +29,8 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 
 | 本地内容 | 上游对象 | 建议动作与前提 |
 |---|---|---|
-| core ARM64 FPSIMD/Clang | [unikraft/unikraft #1875](https://github.com/unikraft/unikraft/pull/1875)、关联 #1873 | 已有同一问题的 PR；当前 Clang19/O2/FPSIMD 配置下两方案指令比较等价。优先验证并采用原 PR，只有具体缺口才讨论增量，不新开竞争 PR |
-| core ARM64 枚举转换 | [unikraft/unikraft #1876](https://github.com/unikraft/unikraft/pull/1876)、关联 #1874 | native hunk 完全相同；原 PR 还修复 Xen。只提供验证，不再投稿同一修复 |
+| core ARM64 FPSIMD/Clang | [unikraft/unikraft #1875](https://github.com/unikraft/unikraft/pull/1875)、关联 #1873 | 已保留原作者及来源采用原 PR，替换自写方案；干净构建和完整 11 项常规 HTTP/3 回归通过。不新开竞争 PR |
+| core ARM64 枚举转换 | [unikraft/unikraft #1876](https://github.com/unikraft/unikraft/pull/1876)、关联 #1874 | 已采用原 PR 的完整修改；native 验证通过，Xen hunk 保留但未运行验证。不再投稿同一修复 |
 | libc++ 21.1.8 | [unikraft/lib-libcxx #38](https://github.com/unikraft/lib-libcxx/pull/38) | 原升级作者 CristianAndrei1423；协作补上消费者配置隔离、包含顺序、getentropy 和归档元数据。后续新 PR 只保留我们的增量 |
 | libc++abi 21.1.8 | [unikraft/lib-libcxxabi #8](https://github.com/unikraft/lib-libcxxabi/pull/8) | 现有升级 PR；我们的增量主要是 hash/版本元数据，优先并入原作者工作，不另开很小的竞争 PR |
 | libunwind 21.1.8 | [unikraft/lib-libunwind #13](https://github.com/unikraft/lib-libunwind/pull/13) | 同上 |
@@ -148,27 +148,36 @@ place even when the file-level |isr build variant is removed.
 
 With our current Clang19, -O2 and CONFIG_FPSIMD=y settings, both variants
 compile. After aligning diagnostic source line numbers, all five functions
-have identical instructions and relocation targets. I have not yet run the
-complete HTTP/3 image regressions with this PR replacing the local workaround.
+have identical instructions and relocation targets.
 
-I would prefer to consume your existing fix with its original attribution
-and validate that composition rather than maintain a parallel implementation.
+I replaced the local workaround with your original fix, preserving your
+authorship, sign-off and source commit reference. A clean ARM64 build and
+all 11 ordinary-image HTTP/3 regression suites pass on QEMU KVM, including
+HTTP/1.1 and HTTP/2 origin proxying, TLS session resumption, backend fault
+recovery, dual-stack wire tests and repeated in-connection MTU changes.
+
+This qualifies our pinned compiler/configuration and does not claim coverage
+of every compiler, optimization setting or LTO configuration.
 ```
 
 本轮用实际 ectx.c 编译参数比较三种情况：原版 ISR 构建失败，本地方案和 PR 方案均可编译。
 本地汇编指令导致源码多四行，最初对象差异仅为诊断行号；用空行对齐后指令及重定位目标一致。
 这证明当前编译配置下的代码生成等价，不是所有编译器、优化配置及 LTO 的普遍证明。
 不应仅凭移除文件级 `|isr` 就断言现有 PR 丢失全部限制或不安全：函数级 `__isr` 仍在。
-完整镜像替换回归完成前，不把现有 PR 标为已完成应用层验证。当前固定运行源码尚未替换。
+现已在同一固定 core 基线上采用原 PR，以 `cherry-pick -x -s` 保留来源和作者；
+自写汇编 feature 指令已移除。空输出目录重建和完整 11 项常规 HTTP/3 回归通过，
+来源提交及集成提交记录在 sources.lock.json，具体运行范围见 validation/README.md。
 
 ### 5.2 core #1876：完全重合的修复
 
 ```text
 The native ARM64 hunk matches the int-to-enum conversion used in our local
-HTTP/3 build. It builds and runs successfully with Clang19 on ARM64/QEMU KVM.
+HTTP/3 build. I have adopted your complete original change with its authorship,
+sign-off and source commit reference preserved. A clean Clang19 ARM64 build
+and all 11 ordinary-image HTTP/3 regression suites pass on QEMU KVM.
 
-I have not exercised the Xen hunk. I will track this PR as the upstream
-prerequisite instead of opening a duplicate PR for the native change.
+I have not exercised the Xen hunk. I track this PR as the upstream prerequisite
+instead of opening a duplicate PR for the native change.
 ```
 
 ### 5.3 libc++ #38 与配套 libc++abi #8、libunwind #13

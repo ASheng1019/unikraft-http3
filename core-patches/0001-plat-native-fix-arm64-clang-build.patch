@@ -1,0 +1,34 @@
+From 7c08cf268f51c4f99b56061442cde354295aae15 Mon Sep 17 00:00:00 2001
+From: Cristian Andrei <cristian.andrei1423@gmail.com>
+Date: Sat, 25 Jul 2026 15:34:53 +0300
+Subject: [PATCH] plat/native: Fix build for arm64 using Clang
+
+The |isr suffix enables the -mgeneral-regs-only flag,
+which causes a build error for ARM64 when using Clang,
+as floating point registers are undefined.
+
+Fix this issue by removing the |isr suffix.
+
+Signed-off-by: Cristian Andrei <cristian.andrei1423@gmail.com>
+(cherry picked from commit 537e08f01d5aea34115e745f850545148d070b73)
+Signed-off-by: Sheng <hsdai22@m.fudan.edu.cn>
+---
+ plat/native/Makefile.uk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/plat/native/Makefile.uk b/plat/native/Makefile.uk
+index 42acaf313..0a87cf291 100644
+--- a/plat/native/Makefile.uk
++++ b/plat/native/Makefile.uk
+@@ -22,7 +22,7 @@ LIBUKPLAT_NATIVE_CINCLUDES-y += -I$(UK_PLAT_COMMON_BASE)/include
+ 
+ ifeq ($(CONFIG_ARCH_ARM_64), y)
+ LIBUKPLAT_NATIVE_SRCS-$(CONFIG_LIBUKPLAT_NATIVE_AUXSP)   += $(LIBUKPLAT_NATIVE_BASE)/arch/arm64/auxsp.c
+-LIBUKPLAT_NATIVE_SRCS-$(CONFIG_LIBUKPLAT_NATIVE_ECTX)   += $(LIBUKPLAT_NATIVE_BASE)/arch/arm64/ectx.c|isr
++LIBUKPLAT_NATIVE_SRCS-$(CONFIG_LIBUKPLAT_NATIVE_ECTX)   += $(LIBUKPLAT_NATIVE_BASE)/arch/arm64/ectx.c
+ LIBUKPLAT_NATIVE_SRCS-$(CONFIG_LIBUKPLAT_NATIVE_EXCEPT) += $(LIBUKPLAT_NATIVE_BASE)/arch/arm64/except.c|isr
+ LIBUKPLAT_NATIVE_SRCS-$(CONFIG_LIBUKPLAT_NATIVE_LCPU_PM) += $(LIBUKPLAT_NATIVE_BASE)/arch/arm64/lcpu_pm.c
+ LIBUKPLAT_NATIVE_SRCS-$(CONFIG_LIBUKPLAT_NATIVE_PAGING) += $(LIBUKPLAT_NATIVE_BASE)/arch/arm64/paging.c|isr
+-- 
+2.43.0
+

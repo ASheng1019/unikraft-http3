@@ -7,8 +7,8 @@ boundaries. This whole directory is not a contribution to the core repository.
 ```
 app-nghttpx/     thin application and deployment configuration
 libs/lib-*/     external ports, their own source patches and library tests
-unikraft/       core checkout with the two declared ARM64 prerequisites
-core-patches/   integration exports of those core prerequisites
+unikraft/       core checkout with existing ARM64 PRs #1875 and #1876
+core-patches/   attributed integration exports of those upstream PR commits
 forks/          four upstream Git repositories for fixes and PR maintenance
 tests/          cross-library integration and independent contract tests
 tools/          local compiler, Kraft and explicit QA dependencies
@@ -86,7 +86,11 @@ configuration. KVM and QEMU are needed for execution, not target compilation.
 
 If unikraft/ is absent, ./setup-core.sh prepares a new pinned checkout with
 the prerequisites; it refuses to overwrite an existing checkout. The
-application defaults to the sibling core and libs directories. UK_ROOT and
+helper imports the patches with git am, preserving Cristian Andrei's authorship,
+sign-offs and original commit references; configure a Git committer identity
+(user.name/user.email) before using it. sources.lock.json records both original
+and integrated commit IDs. The two earlier local implementations are replaced.
+The application defaults to the sibling core and libs directories. UK_ROOT and
 LIBS_ROOT can be supplied explicitly for another workspace layout.
 
 The optional local tool runner selects the preserved Clang19/Kraft/aioquic tools:
