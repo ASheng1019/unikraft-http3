@@ -1,12 +1,12 @@
 # HTTP/3 上游投稿计划与文本草稿
 
-核对日期：2026-10-30。本文只在个人工作区维护；没有据此向上游创建 issue、PR、评论或发送消息。
+核对日期：2026-10-30。本文只在个人工作区维护；没有据此向上游创建 Discussion、issue、PR、评论或发送消息。
 个人 GitHub 的 20 个仓库当前分支已逐一 push 并核对远端提交号。
 已发布 PR 的正文继续以 GitHub 为准，不复制成另一套投稿快照。
 
 ## 1. 建议的投稿方式
 
-建议先开 **一个 Unikraft HTTP/3 协调 issue**，用现有可运行实现讨论接收方式：
+先开 **一个 Unikraft HTTP/3 Ideas Discussion**，用现有可运行实现讨论接收方式：
 新 library/service port 仓库、与已有依赖升级的协作、native 应用和集成测试的承载位置。
 它不是请求维护者先批准每个小修复，也不要求实现全部合并到 core。
 
@@ -14,7 +14,11 @@
 已有 PR 的工作接续原线程，不另开竞争 PR。PMTU 恢复、TCP ACK 时序、批量策略等行为设计
 应先讨论，再提交单独实现，不能隐含在“移植库”中。
 
-这是根据项目规模和当前依赖关系作出的建议，不是上游要求所有 PR 必须先有 issue。
+刚核对的上游 [project_backlog.yml](https://github.com/unikraft/unikraft/blob/staging/.github/ISSUE_TEMPLATE/project_backlog.yml)
+明确将尚未讨论的新功能引导到 Discussions 的 Ideas 分类，backlog issue 用于已与核心团队讨论过的明确工作；
+[config.yml](https://github.com/unikraft/unikraft/blob/staging/.github/ISSUE_TEMPLATE/config.yml) 关闭自由格式 issue。
+因此修正此前“先开协调 issue”的建议：先 Discussion，接收方式明确后再按维护者建议创建 backlog/跟踪 issue。
+这不要求普通独立修复也先开 issue。
 Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed-off-by，补充相关测试，
 在投稿前运行 checkpatch，并在 Related Work 写清依赖。
 
@@ -39,7 +43,7 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 | c-ares 1.34.9 | [unikraft/lib-c-ares](https://github.com/unikraft/lib-c-ares) | 已恢复通用 resolver 描述和元数据，显式声明 musl/socket/POSIX 能力；不恢复失效 newlib 或强制 IPv6。独立 API/线程和真实 DNS 验证通过 |
 | zlib 1.3.2 | [unikraft/lib-zlib](https://github.com/unikraft/lib-zlib) | 已补全 Library.uk，修正 README；HAVE_LIBC + 可选 gzip 文件 API，不强制 VFS/挂载。内存/流式 gzip/文件 API 独立验证通过 |
 | musl 1.2.3 下载 hash | [unikraft/lib-musl](https://github.com/unikraft/lib-musl) | 不是新版本移植。可随该 port 的维护工作提交；无需为 hash 单独开协调 issue。当前新增 URL 被后文同名赋值覆盖，应先去除冗余 |
-| ngtcp2 port | 候选 `unikraft/lib-ngtcp2` | 官方仓库尚不存在，先通过协调 issue 确认。基础分支 dev/ngtcp2-base-port 已移除 PMTU 策略及 patch hook，266 项 transport 目标测试通过；策略只在独立后续提交 |
+| ngtcp2 port | 候选 `unikraft/lib-ngtcp2` | 官方仓库尚不存在，先通过 Ideas Discussion 确认。基础分支 dev/ngtcp2-base-port 已移除 PMTU 策略及 patch hook，266 项 transport 目标测试通过；策略只在独立后续提交 |
 | nghttp3 port | 候选 `unikraft/lib-nghttp3` | 同上；基础库不修改上游协议实现，独立验证 |
 | nghttp2 C-library port | 候选 `unikraft/lib-nghttp2` | 同上；只包含 C 库及私有符号隔离，不混入 nghttpx 服务适配 |
 | libev port | 候选 `unikraft/lib-libev`，名称待确认 | 同上；poll/epoll 及计时器能力如实声明 |
@@ -53,13 +57,13 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 | 总工作区、工具包、历史性能原始记录 | 个人 [unikraft-http3](https://github.com/ASheng1019/unikraft-http3) | 保留为复现和开发入口；不作为 Unikraft core 的一个大 PR |
 
 公开关键词检索未发现专门的 ngtcp2/nghttp3/nghttpx 投稿，但这不能证明无人进行未公开工作，
-也不能代替 roadmap/维护者确认。不要在 issue 中写“这个领域没有 owner”。
+也不能代替 roadmap/维护者确认。不要在 Discussion/issue 中写“这个领域没有 owner”。
 仓库中部分 MAINTAINERS.md 仍有明显旧模板信息；协作以具体已有 PR 和维护者回应为依据。
 
 ## 3. 推荐顺序与投稿前的实际缺口
 
 1. 保持已经公开的五个正确性 PR；待用户授权后再处理评论或新更新。
-2. 先发布下面的 HTTP/3 协调 issue，列出现有可运行代码与明确问题。
+2. 先发布下面的 HTTP/3 Ideas Discussion，列出现有可运行代码与明确问题。
 3. 在 #1875/#1876、LLVM 三个 PR 和 OpenSSL #12 提供最小增量/验证反馈，尊重原作者。
    这些评论也必须等用户授权后才能发送；目前只保存草稿。
 4. nghttpx 截断输入可并行作为独立通用正确性 PR；与 Unikraft 新 port 审批无必然先后关系。
@@ -68,6 +72,26 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 6. 分批推进 lwIP socket/RX 能力；首轮投稿止于 dev/lwip-native-integration，不包含 ACK deadline。
 7. 依赖和承载方式明确后，提交 nghttpx 服务、native 应用和适合上游 CI 的集成子集。
 8. PMTU 恢复和 ACK deadline 等策略另开讨论；libslirp 候选继续留在个人实验分支。
+
+### 3.1 实际投稿优先级与问题跟踪
+
+下面是推进顺序，不要求每行全部合并后才准备下一行；评审可并行，合并遵守真实依赖。
+
+| 顺序 | 对象 | 实际操作 |
+|---|---|---|
+| 1 | unikraft/unikraft Discussions / Ideas | 一个 HTTP/3 总体提案，附固定个人仓库、用途、范围与结果；请求确认新 port 仓库、服务/应用边界及已有工作 |
+| 2 | 已有 core #1875/#1876、LLVM 三个 PR、OpenSSL #12 | 在原线程提供验证/协调最小增量；不另开重复 issue/升级 PR |
+| 3 | unikraft/lib-zlib、unikraft/lib-c-ares、unikraft/lib-lwip | 通用 ports 各一个聚焦 PR；lwIP 先 A（版本/回移）。三者可并行，不等待整套 HTTP/3 接收 |
+| 4 | 讨论后建立的新 port 仓库 | nghttp3、ngtcp2 transport-only 优先；nghttp2 C 库、libev 可并行；初始仓库接收方式由维护者确认 |
+| 5 | unikraft/lib-openssl、lib-libcxx 及配套 runtime；lib-lwip | 接续原升级系列提交必要增量；lwIP 按 B→C→D 的整理序列推进。OpenSSL helper 随兼容 TLS 依赖就绪后启用/验证 |
+| 6 | 维护者确认的 nghttpx service port 仓库 | 提交服务适配，链接全部前置 PR；投稿前补首轮无 PMTU/ACK 策略应用组合的对应回归，不能直接引用开发策略组合的全部成绩 |
+| 7 | 维护者确认的 native 应用/catalog 位置 | 优先讨论 catalog-core；提交薄应用、部署说明与适合 CI 的集成子集 |
+
+截至本次查询，五个候选官方新 port 名称均返回公开 API 404；不要向不存在的仓库准备可直接创建的 PR。
+协调后只需一个明确的 HTTP/3 跟踪 issue，串联新 ports 与服务/应用；小修复、每个依赖升级和每个新 port
+不分别制造同内容 issue。若维护者需要多个 backlog 项，再按其接受的拆分方式创建。
+nghttp2 截断输入尚无 PR，可在其原仓库独立投稿；Retry 和四项 lwIP 修复继续已有 PR，不依赖该 Discussion。
+PMTU、ACK deadline 及 libslirp 实验本轮不新建策略 issue 或 PR，保留独立提交待以后讨论。
 
 个人仓库发布完成，**不等于当前所有开发分支已经可直接创建上游 PR**。具体需要：
 
@@ -91,9 +115,10 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 上面标为已完成的整理已经落实到独立分支；其余仍是投稿前的检查项。固定运行版本继续显式包含
 已测量的策略提交，首轮投稿分支排除它们；两种组合分开构建、验证和记录。
 
-## 4. 首个协调 issue：完整英文草稿
+## 4. 首个 Ideas Discussion：完整英文草稿
 
-目标：`unikraft/unikraft`。类型：增强/设计协调；若维护者更偏好 Discussion，再按其建议迁移。
+目标：[unikraft/unikraft Discussions](https://github.com/unikraft/unikraft/discussions/new)，分类 Ideas。
+目前不新建 backlog issue；讨论明确后再创建一个跟踪 issue，引用此 Discussion 并列出分项 PR。
 
 标题：**[RFC] Native HTTP/3 reverse proxy support with ngtcp2, nghttp3 and nghttpx**
 
@@ -132,7 +157,7 @@ Before preparing the port PR series, could maintainers advise on:
 4. The preferred sequencing with the existing runtime and OpenSSL PRs?
 ```
 
-issue 的重点是可用性、已实现的边界、接收方式和协同；不要贴全部性能日志或一次请求接收所有补丁。
+Discussion 的重点是可用性、已实现的边界、接收方式和协同；不要贴全部性能日志或一次请求接收所有补丁。
 
 ## 5. 现有 PR 的协作文本草稿
 
@@ -357,7 +382,7 @@ black-hole recovery policy and revalidate its exact dependency combination.
 ### 7.6 Unikraft PR 的统一外层格式
 
 上面的主题正文放进目标仓库模板的 Description of Changes；Related Work 填该项真实依赖，
-包括原作者 PR 和以后创建的协调 issue，不写“无依赖”。投稿时检查项以最终分支的实际结果为准：
+包括原作者 PR、总体 Discussion 和讨论后创建的跟踪 issue，不写“无依赖”。投稿时检查项以最终分支的实际结果为准：
 
 ```markdown
 ### Description of Changes
@@ -386,7 +411,7 @@ black-hole recovery policy and revalidate its exact dependency combination.
 
 ### 8.1 lib-lwip
 
-目标：`unikraft/lib-lwip`；先由协调 issue 确认阶段边界。
+目标：`unikraft/lib-lwip`；先由总体 Discussion 确认阶段边界。
 
 **PR A 标题：Version the lwIP patch series and add a pinned 2.2.1 source option**
 
@@ -571,6 +596,6 @@ its attribution and license retained.
 
 ## 10. 本轮明确不执行的上游操作
 
-本轮没有创建或更新上游 issue、PR 或评论，也没有联系维护者；全部新文本仅为草稿。
+本轮没有创建或更新上游 Discussion、issue、PR 或评论，也没有联系维护者；全部新文本仅为草稿。
 既有 PR 状态查询和公开检索都是只读。个人 GitHub 同步不修改上游默认分支。
-后续实际发布哪一个 issue/PR/评论，等待用户另行授权；不会自动按本文批量发送。
+后续实际发布哪一个 Discussion/issue/PR/评论，等待用户另行授权；不会自动按本文批量发送。

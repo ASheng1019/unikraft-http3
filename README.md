@@ -212,5 +212,5 @@ QA dependencies before running integration tests.
 
 The [upstream contribution plan](docs/upstream-plan.md) records target
 repositories, existing work to coordinate with, readiness gaps, and unpublished
-issue/PR drafts. Publication on personal GitHub does not imply upstream acceptance
+Discussion/issue/PR drafts. Publication on personal GitHub does not imply upstream acceptance
 or permission to post those drafts.
