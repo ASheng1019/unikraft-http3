@@ -10,6 +10,7 @@ initrds, tool installations and object trees are not uploaded.
 
 | Check | Result |
 |---|---|
+| GitHub recursive checkout | 19/19 exact module commits; clean rebuild and wire/defaults suites PASS |
 | Empty-output Clang19 ARM64 service build | PASS against updated core plus two ARM64 prerequisite commits |
 | Ordinary HTTP/3 service | 11/11 suites PASS, including repeated IPv4/IPv6 MTU decrease, cooldown, re-probe and second decrease |
 | Actual IPv4 QUIC DF on Ethernet | PASS; old image fails the new assertion as expected |
