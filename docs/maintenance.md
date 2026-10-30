@@ -2,7 +2,7 @@
 
 ## 目录各自负责什么
 
-- `unikraft/`：Unikraft core 原始 Git 仓库，保留两项 ARM64 前置修改。
+- `unikraft/`：Unikraft core 原始 Git 仓库，保留两项本地 ARM64 前置修改；现已确认关联既有 #1875/#1876，不作为两项新投稿。
 - `libs/`：各 external-library port；Config.uk、Makefile.uk、平台 glue 直接维护在各 port。
 - `app-nghttpx/`：薄应用入口、Kraftfile、部署配置。
 - `forks/`：nghttp2、lwIP、ngtcp2、libslirp 的独立 Git 开发仓库。用于维护通用修复和回应上游评审，不是构建输入。
@@ -59,7 +59,7 @@ libslirp 的 TIME_WAIT 候选也暂缓：本地 ISN 选择、旧重复报文隔�
 
 ## 后续提交给哪些仓库
 
-- `unikraft/` 的两项前置修复 → unikraft/unikraft，各自独立。
+- `unikraft/` 的两项前置修改 → 跟进既有 [#1875](https://github.com/unikraft/unikraft/pull/1875) / [#1876](https://github.com/unikraft/unikraft/pull/1876)：前者比较备选方案，后者 native hunk 完全重合，不再开重复 PR。
 - 八个已有 port（musl、lwip、libcxx、libcxxabi、libunwind、openssl、c-ares、zlib）→ 各自 unikraft/lib-* 仓库。
 - 新 port（ngtcp2、nghttp3、nghttp2、libev、nghttpx）→ 申请/确认对应 port 仓库后分别提交。
 - 应用、部署及跨库测试 → 应用/catalog 或相应 CI；具体承载形式与维护者确认。
@@ -97,3 +97,10 @@ Git 元数据不放在 `build/` 或缓存目录中。此次从临时发布目录
 日常修改先在对应模块分支提交并推送，再在顶层提交该模块的新引用。顶层只管理集成文件
 和固定版本引用。新克隆的模块通常处于 detached HEAD，开发前切换或创建有明确用途的分支。
 清理构建输出不能触碰 `.git/`；备份未推送的本地分支时须包含 `.git/modules/`。
+
+## 上游接收规划
+
+具体投稿对象、现有 PR 重合关系、先 issue/直接 PR 的判断、尚待整改项及英文草稿，
+集中维护在 [upstream-plan.md](upstream-plan.md)。个人仓库已发布不代表所有组合分支
+已具备直接投稿条件；尤其 ngtcp2 基础 port 的策略边界、c-ares/zlib 通用配置和元数据、
+lwIP 提交拆分仍须准备。已有 PR 的正文只在 GitHub 维护，不保存重复快照。

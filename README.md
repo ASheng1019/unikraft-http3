@@ -162,8 +162,9 @@ in tests/upstream/. Builds use release archives and never depend on forks/.
 ## Contribution boundaries
 
 Prepare separate changes for each lib repository, the application/catalog,
-the core prerequisites and generic fixes for ngtcp2/nghttp2. Do not submit
-this entire workspace to core. The local candidate lib-nghttpx name and target
+and generic fixes for ngtcp2/nghttp2. Coordinate the core prerequisites through
+the existing upstream PRs rather than resubmitting duplicate changes.
+Do not submit this entire workspace to core. The local candidate lib-nghttpx name and target
 repository still require agreement. Preserve the authorship of the reused
 LLVM/OpenSSL ports and Quinn attribution. Personal repository publication preserves original histories and signed-off fixes.
 Upstream CI, maintainer agreement and policy acceptance remain submission steps.
@@ -189,3 +190,8 @@ outputs, generated certificates, initrds and control tokens. Only tool-selection
 are source-controlled in tools/. validation/README.md records qualification; raw measured reference
 artifacts remain local. A fresh clone needs the explicitly documented external
 QA dependencies before running integration tests.
+
+The [upstream contribution plan](docs/upstream-plan.md) records target
+repositories, existing work to coordinate with, readiness gaps, and unpublished
+issue/PR drafts. Publication on personal GitHub does not imply upstream acceptance
+or permission to post those drafts.
