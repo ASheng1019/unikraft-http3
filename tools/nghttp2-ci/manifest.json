@@ -1,0 +1,22 @@
+[
+  {
+    "package": "libstdcxx-devel_linux-aarch64",
+    "url": "https://conda.anaconda.org/conda-forge/noarch/libstdcxx-devel_linux-aarch64-15.3.0-h7f18156_7.conda",
+    "sha256": "72c169891e650308c442f840ac62257c426c873dcb30df084b161882e1095fbb"
+  },
+  {
+    "package": "libstdcxx",
+    "url": "https://conda.anaconda.org/conda-forge/linux-aarch64/libstdcxx-15.3.0-hef695bb_7.conda",
+    "sha256": "70f23347c4e8481ef91a9806a59d50e4a4a96c7c72041d3a0654ed5b12470f3e"
+  },
+  {
+    "package": "libgcc",
+    "url": "https://conda.anaconda.org/conda-forge/linux-aarch64/libgcc-15.3.0-h954ee24_7.conda",
+    "sha256": "df096c235cf04e802487602f68dbe60d3ab866a7e59e81ae0458f3596a752700"
+  },
+  {
+    "package": "go",
+    "url": "https://go.dev/dl/go1.26.10.linux-arm64.tar.gz",
+    "sha256": "3f4227ce7b206a513e794f1393adb473a07b46e94d18bd15d1c684bbb7319797"
+  }
+]

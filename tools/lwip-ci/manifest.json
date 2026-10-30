@@ -1,0 +1,16 @@
+[
+  {
+    "package": "doxygen",
+    "archive": "cache/tools/lwip-ci/doxygen_1.9.8+ds-2ubuntu0.1_arm64.deb",
+    "sha256": "baa99b2e5c8372c54d548ef1227b6e72f9eb52eeeaad248adff6ff2569ec58c8",
+    "version": "1.9.8+ds-2ubuntu0.1",
+    "url": "https://mirrors.ustc.edu.cn/ubuntu-ports/pool/universe/d/doxygen/doxygen_1.9.8+ds-2ubuntu0.1_arm64.deb"
+  },
+  {
+    "package": "libxapian30",
+    "archive": "cache/tools/lwip-ci/libxapian30_1.4.22-1build1_arm64.deb",
+    "sha256": "1f60bef6627ac61f7a4eee4e8998d602f4f5c39bf034bc6d830abf1509a50ad9",
+    "version": "1.4.22-1build1",
+    "url": "https://mirrors.ustc.edu.cn/ubuntu-ports/pool/universe/x/xapian-core/libxapian30_1.4.22-1build1_arm64.deb"
+  }
+]

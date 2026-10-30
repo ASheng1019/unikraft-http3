@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: BSD-3-Clause
+$(eval $(call addlib,appeagain))
+APPEAGAIN_SRCS-y += $(APP_BASE)/../../app-nghttpx/main.c
+APPEAGAIN_SRCS-y += $(APP_BASE)/udp_eagain.c
+LDFLAGS-y += -Wl,--wrap=sendmsg

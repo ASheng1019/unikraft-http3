@@ -1,0 +1,197 @@
+{
+  "unikraft": {
+    "url": "https://github.com/unikraft/unikraft.git",
+    "commit": "359307a2a4cc9c1feb22683d841650902b799e4d"
+  },
+  "ports": [
+    {
+      "name": "lib-musl",
+      "url": "https://github.com/unikraft/lib-musl.git",
+      "commit": "5fed64ecd7f8abb29df444c73df6d797d4efa18f"
+    },
+    {
+      "name": "lib-lwip",
+      "url": "https://github.com/unikraft/lib-lwip.git",
+      "commit": "ec55ae17618feeb57c8c10109bcf5c42723e8e95"
+    },
+    {
+      "name": "lib-libcxx",
+      "pr": "https://github.com/unikraft/lib-libcxx/pull/38",
+      "commit": "b7d939f50cdd4ab19967858084f4a33fb62b6c0e",
+      "author": "CristianAndrei1423",
+      "repo_url": "https://github.com/CristianAndrei1423/lib-libcxx.git",
+      "state_at_original_query": "open"
+    },
+    {
+      "name": "lib-libcxxabi",
+      "pr": "https://github.com/unikraft/lib-libcxxabi/pull/8",
+      "commit": "a32a133b2a95531549ce888aa64393403dcad092",
+      "author": "CristianAndrei1423",
+      "repo_url": "https://github.com/CristianAndrei1423/lib-libcxxabi.git",
+      "state_at_original_query": "open"
+    },
+    {
+      "name": "lib-libunwind",
+      "pr": "https://github.com/unikraft/lib-libunwind/pull/13",
+      "commit": "39d111601d9f8fde0073ea11bf21dd8a8927ceb7",
+      "author": "CristianAndrei1423",
+      "repo_url": "https://github.com/CristianAndrei1423/lib-libunwind.git",
+      "state_at_original_query": "open"
+    },
+    {
+      "name": "lib-openssl",
+      "url": "https://github.com/CristianAndrei1423/lib-openssl.git",
+      "commit": "3289ac4404b7f564f2e5de8cb82b685d9635fa44",
+      "pr": "https://github.com/unikraft/lib-openssl/pull/12",
+      "state_at_query": "open",
+      "base_port_version": "3.5.7",
+      "integrated_version": "3.5.9"
+    },
+    {
+      "name": "lib-c-ares",
+      "url": "https://github.com/unikraft/lib-c-ares",
+      "commit": "3b94366cde25c0934f12fa5c5ce2c7beca61e6cd"
+    },
+    {
+      "name": "lib-zlib",
+      "url": "https://github.com/unikraft/lib-zlib",
+      "commit": "b48a887f069b10f457f7bf513a0362eb53ff99dc"
+    }
+  ],
+  "sources": [
+    {
+      "name": "openssl",
+      "version": "3.5.9",
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+      "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+      "directory": "openssl-3.5.9"
+    },
+    {
+      "name": "nghttp3",
+      "version": "1.18.0",
+      "url": "https://github.com/ngtcp2/nghttp3/releases/download/v1.18.0/nghttp3-1.18.0.tar.xz",
+      "sha256": "aad782c23d3f01bd4bb52c8bac7a553b631ef8115fd1612703df6183449fef19",
+      "directory": "nghttp3-1.18.0"
+    },
+    {
+      "name": "ngtcp2",
+      "version": "1.25.0",
+      "url": "https://github.com/ngtcp2/ngtcp2/releases/download/v1.25.0/ngtcp2-1.25.0.tar.xz",
+      "sha256": "2a34d2484ba17847a5d11965704e9dd0fac4c6d8efc75ffe1ec7de66d8c6b6fb",
+      "directory": "ngtcp2-1.25.0"
+    },
+    {
+      "name": "nghttp2",
+      "version": "1.70.0",
+      "url": "https://github.com/nghttp2/nghttp2/releases/download/v1.70.0/nghttp2-1.70.0.tar.xz",
+      "sha256": "e05cb1388eaca3830aded4ccf20044b6e1ac1a61411dcca11b0437c4285c8bc2",
+      "directory": "nghttp2-1.70.0"
+    },
+    {
+      "name": "curl",
+      "version": "8.22.0",
+      "url": "https://github.com/curl/curl/releases/download/curl-8_22_0/curl-8.22.0.tar.xz",
+      "sha256": "f7ef3ae8a22e521f289803fe93543eb64c329b58aa73a9e224dfd915a2a5f4f7",
+      "directory": "curl-8.22.0"
+    },
+    {
+      "name": "c-ares",
+      "version": "1.34.9",
+      "url": "https://github.com/c-ares/c-ares/releases/download/v1.34.9/c-ares-1.34.9.tar.gz",
+      "sha256": "9364b70a12eb59a06830fb488d9357f90100dff0d98b23ea3593a183d43e6f2f",
+      "directory": "c-ares-1.34.9"
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.2",
+      "url": "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
+      "sha256": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+      "directory": "zlib-1.3.2"
+    },
+    {
+      "name": "libev",
+      "version": "4.33",
+      "url": "https://dist.schmorp.de/libev/libev-4.33.tar.gz",
+      "sha256": "507eb7b8d1015fbec5b935f34ebed15bf346bed04a11ab82b8eee848c4205aea",
+      "directory": "libev-4.33"
+    }
+  ],
+  "musl": {
+    "version": "1.2.3",
+    "url": "https://www.musl-libc.org/releases/musl-1.2.3.tar.gz",
+    "sha256": "7d5b0b6062521e4627e099e4c9dc8248d32a30285e959b7eecaa780cf8cfd4a4"
+  },
+  "lwip": {
+    "version": "2.2.1",
+    "commit": "77dcd25a72509eb83f72b033d219b1d40cd8eb95",
+    "url": "https://github.com/lwip-tcpip/lwip/archive/77dcd25a72509eb83f72b033d219b1d40cd8eb95.zip",
+    "sha256": "e09bf3518f1d23204cdd38203e1bdbbb5c634a1dce8dde487b7eaca3f2407245",
+    "directory": "lwip-77dcd25a72509eb83f72b033d219b1d40cd8eb95",
+    "kconfig_choice": "LWIP_PINNED22X",
+    "other_choices": "Preserved and configuration-tested; only pinned 2.2.1 is the current HTTP/3 qualification target.",
+    "previous_compatibility_source": {
+      "commit": "bef26c44236a078d4352e76392ef16f019bea501",
+      "url": "https://github.com/unikraft/fork-lwip/archive/bef26c44236a078d4352e76392ef16f019bea501.zip",
+      "directory": "fork-lwip-bef26c44236a078d4352e76392ef16f019bea501",
+      "sha256": "0e7de8cd81d29194b6eb587968d11b9d30f74f0230351e63a4178a72cd307cac",
+      "kconfig_choice": "LWIP_PINNED21X",
+      "other_choices": "Preserved source selection semantics; configuration resolution tested, not full-build qualified."
+    }
+  },
+  "runtime_archives": [
+    {
+      "name": "libcxx",
+      "version": "21.1.8",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/libcxx-21.1.8.src.tar.xz",
+      "sha256": "6422a58a5c29b7f4fda224cfdc07842be8a208a61301bbba7a219116e3351809"
+    },
+    {
+      "name": "libcxxabi",
+      "version": "21.1.8",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/libcxxabi-21.1.8.src.tar.xz",
+      "sha256": "709c9a63bde1e36a80d8675becc38073b85f0fa1b4111e34542b885c9e1239da"
+    },
+    {
+      "name": "libunwind",
+      "version": "21.1.8",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/libunwind-21.1.8.src.tar.xz",
+      "sha256": "03e8adc6c3bdde657dcaedc94886ea70d1f7d551d622fcd8a36a8300e5c36cbc"
+    }
+  ],
+  "toolchain": {
+    "packages": [
+      {
+        "name": "clang-19",
+        "version": "1:19.1.1-1ubuntu1~24.04.2",
+        "url": "https://mirrors.ustc.edu.cn/ubuntu-ports/pool/universe/l/llvm-toolchain-19/clang-19_19.1.1-1ubuntu1%7e24.04.2_arm64.deb",
+        "filename": "clang-19_1%3a19.1.1-1ubuntu1~24.04.2_arm64.deb",
+        "sha256": "8745857ecb4b1b6ae51f96b7c6085b7b7e6fb3c82310739b355e5d76e30e8724"
+      },
+      {
+        "name": "libclang-cpp19",
+        "version": "1:19.1.1-1ubuntu1~24.04.2",
+        "url": "https://mirrors.ustc.edu.cn/ubuntu-ports/pool/universe/l/llvm-toolchain-19/libclang-cpp19_19.1.1-1ubuntu1%7e24.04.2_arm64.deb",
+        "filename": "libclang-cpp19_1%3a19.1.1-1ubuntu1~24.04.2_arm64.deb",
+        "sha256": "0328224fc2ec2bee72c353f9a2bcafcb077dba087ce02b5d5f3c76ce51015d27"
+      },
+      {
+        "name": "libllvm19",
+        "version": "1:19.1.1-1ubuntu1~24.04.2",
+        "url": "https://mirrors.ustc.edu.cn/ubuntu-ports/pool/main/l/llvm-toolchain-19/libllvm19_19.1.1-1ubuntu1%7e24.04.2_arm64.deb",
+        "filename": "libllvm19_1%3a19.1.1-1ubuntu1~24.04.2_arm64.deb",
+        "sha256": "f1a867213143cdbef8ed5f7e1afdb3d24cad32d2eccb461b498160aca1ba7022"
+      },
+      {
+        "name": "libclang-common-19-dev",
+        "version": "1:19.1.1-1ubuntu1~24.04.2",
+        "url": "https://mirrors.ustc.edu.cn/ubuntu-ports/pool/universe/l/llvm-toolchain-19/libclang-common-19-dev_19.1.1-1ubuntu1%7e24.04.2_arm64.deb",
+        "filename": "libclang-common-19-dev_1%3a19.1.1-1ubuntu1~24.04.2_arm64.deb",
+        "sha256": "54ee0775d1c199456a119e5b7ae76822556883428e005c0a9b8fe8789f022260"
+      }
+    ]
+  },
+  "qualification_architecture": "aarch64/QEMU KVM",
+  "policy": "Source archive/provenance lock. Exact development checkouts are pinned by workspace Git submodules; candidate ports and upstream proposals are not accepted upstream.",
+  "delivery_version": "quic-h3-arm64",
+  "version_policy": "Fixed releases with one removable backport per upstream fix; PR/commit provenance is recorded in the patch header."
+}

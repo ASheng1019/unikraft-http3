@@ -1,0 +1,236 @@
+diff --git a/meson.build b/meson.build
+index 56fb91e7..e1754d25 100644
+--- a/meson.build
++++ b/meson.build
+@@ -248,6 +248,17 @@ guestfwdtest = executable('guestfwdtest', 'test/guestfwdtest.c',
+ 
+ test('guestfwd', guestfwdtest)
+ 
++# Use the real stack objects to construct deterministic internal TCP states.
++tcptimewaittest = executable('tcptimewaittest', 'test/tcptimewaittest.c',
++  objects: lib.extract_all_objects(recursive: true),
++  c_args: cargs,
++  link_args: vflag,
++  include_directories: ['src', '.'],
++  dependencies: libslirp_deps
++)
++test('tcp-time-wait', tcptimewaittest)
++
++
+ if install_devel
+   install_headers(['src/libslirp.h'], subdir : 'slirp')
+ 
+diff --git a/src/tcp_input.c b/src/tcp_input.c
+index 6617d384..8fe06ca4 100644
+--- a/src/tcp_input.c
++++ b/src/tcp_input.c
+@@ -799,6 +799,22 @@ findso:
+         tp->rcv_up = ti->ti_seq;
+         goto step6;
+     } /* switch tp->t_state */
++    /*
++     * A bare SYN can reuse a TIME_WAIT four-tuple.  Handle it before
++     * receive-window trimming: a newer ISN can reopen even inside the
++     * old window; an older ISN needs an ACK to resynchronize the peer.
++     * Otherwise in-window SYNs are reset and old SYNs are silently lost
++     * at the missing-ACK check below.
++     */
++    if (tp->t_state == TCPS_TIME_WAIT &&
++        (tiflags & (TH_SYN | TH_ACK | TH_RST | TH_FIN | TH_URG)) == TH_SYN) {
++        if (SEQ_GT(ti->ti_seq, tp->rcv_nxt)) {
++            iss = tp->rcv_nxt + TCP_ISSINCR;
++            tp = tcp_close(tp);
++            goto findso;
++        }
++        goto dropafterack;
++    }
+     /*
+      * States other than LISTEN or SYN_SENT.
+      * Check that at least some bytes of segment are within
+@@ -862,18 +878,6 @@ findso:
+     todrop = (ti->ti_seq + ti->ti_len) - (tp->rcv_nxt + tp->rcv_wnd);
+     if (todrop > 0) {
+         if (todrop >= ti->ti_len) {
+-            /*
+-             * If a new connection request is received
+-             * while in TIME_WAIT, drop the old connection
+-             * and start over if the sequence numbers
+-             * are above the previous ones.
+-             */
+-            if (tiflags & TH_SYN && tp->t_state == TCPS_TIME_WAIT &&
+-                SEQ_GT(ti->ti_seq, tp->rcv_nxt)) {
+-                iss = tp->rcv_nxt + TCP_ISSINCR;
+-                tp = tcp_close(tp);
+-                goto findso;
+-            }
+             /*
+              * If window is closed can only take segments at
+              * window edge, and have to drop data and PUSH from
+diff --git a/test/tcptimewaittest.c b/test/tcptimewaittest.c
+new file mode 100644
+index 00000000..e079e54f
+--- /dev/null
++++ b/test/tcptimewaittest.c
+@@ -0,0 +1,162 @@
++/* SPDX-License-Identifier: BSD-3-Clause */
++/* Exercise real TCP input/output, with a deterministic TIME_WAIT fixture. */
++#include "slirp.h"
++#include <assert.h>
++
++static unsigned packets;
++static uint8_t reply_flags;
++static uint32_t reply_ack;
++static const uint8_t guest_mac[] = {0x52, 0x54, 0, 0x12, 0x34, 0x56};
++
++static uint32_t read32(const uint8_t *p)
++{
++    return (uint32_t)p[0] << 24 | (uint32_t)p[1] << 16 |
++           (uint32_t)p[2] << 8 | p[3];
++}
++
++static void write32(uint8_t *p, uint32_t v)
++{
++    p[0] = v >> 24;
++    p[1] = v >> 16;
++    p[2] = v >> 8;
++    p[3] = v;
++}
++
++static void checksum(uint8_t *p, size_t len, uint8_t *out)
++{
++    uint32_t sum = 0;
++    size_t i;
++    for (i = 0; i + 1 < len; i += 2) {
++        sum += (uint16_t)p[i] << 8 | p[i + 1];
++    }
++    if (i < len) {
++        sum += (uint16_t)p[i] << 8;
++    }
++    while (sum >> 16) {
++        sum = (sum & 0xffff) + (sum >> 16);
++    }
++    out[0] = (uint8_t)(~sum >> 8);
++    out[1] = (uint8_t)~sum;
++}
++
++static slirp_ssize_t send_packet(const void *buf, size_t len, void *opaque)
++{
++    const uint8_t *p = buf;
++    if (len >= 54 && p[12] == 8 && p[13] == 0 && p[23] == IPPROTO_TCP) {
++        ++packets;
++        reply_flags = p[47];
++        reply_ack = read32(p + 42);
++    }
++    return len;
++}
++
++static int64_t clock_ns(void *opaque) { return 0; }
++static void unregister_socket(slirp_os_socket fd, void *opaque) {}
++static slirp_ssize_t guest_write(const void *buf, size_t len, void *opaque)
++{
++    return len;
++}
++
++static void run_case(uint32_t previous, uint32_t sequence, uint8_t flags,
++                     bool reopen, bool expect_ack)
++{
++    SlirpCb cb = {.send_packet = send_packet, .clock_get_ns = clock_ns,
++                  .unregister_poll_socket = unregister_socket};
++    SlirpConfig config = {.version = SLIRP_CONFIG_VERSION_MAX,
++                          .in_enabled = true, .disable_dns = true};
++    struct in_addr guest, server;
++    Slirp *slirp;
++    struct socket *so;
++    struct tcpcb *tp;
++    uint8_t packet[54] = {0}, pseudo[32] = {0};
++    int port = 8080;
++
++    inet_pton(AF_INET, "10.0.2.0", &config.vnetwork);
++    inet_pton(AF_INET, "255.255.255.0", &config.vnetmask);
++    inet_pton(AF_INET, "10.0.2.2", &config.vhost);
++    inet_pton(AF_INET, "10.0.2.15", &guest);
++    inet_pton(AF_INET, "10.0.2.4", &server);
++    slirp = slirp_new(&config, &cb, NULL);
++    assert(slirp);
++    assert(slirp_add_guestfwd(slirp, guest_write, NULL, &server, port) == 0);
++    arp_table_add(slirp, guest.s_addr, guest_mac);
++    so = socreate(slirp, IPPROTO_TCP);
++    so->so_lfamily = so->so_ffamily = AF_INET;
++    so->so_laddr = guest;
++    so->so_lport = htons(40000);
++    so->so_faddr = server;
++    so->so_fport = htons(port);
++    tcp_attach(so);
++    tp = so->so_tcpcb;
++    tp->t_state = TCPS_TIME_WAIT;
++    tp->rcv_nxt = tp->rcv_up = previous;
++    tp->rcv_adv = previous + 4096;
++    tp->snd_nxt = tp->snd_max = tp->snd_una = 500000;
++    tp->snd_wnd = 4096;
++    sbreserve(&so->so_rcv, 8192);
++    sbreserve(&so->so_snd, 8192);
++    tcp_template(tp);
++
++    memcpy(packet, "\x52\x55\x0a\x00\x02\x02", 6);
++    memcpy(packet + 6, guest_mac, 6);
++    packet[12] = 8;
++    packet[14] = 0x45;
++    packet[17] = 40;
++    packet[22] = 64;
++    packet[23] = IPPROTO_TCP;
++    memcpy(packet + 26, &guest.s_addr, 4);
++    memcpy(packet + 30, &server.s_addr, 4);
++    packet[34] = 40000 >> 8;
++    packet[35] = (uint8_t)40000;
++    packet[36] = port >> 8;
++    packet[37] = port;
++    write32(packet + 38, sequence);
++    packet[46] = 0x50;
++    packet[47] = flags;
++    packet[48] = 0x10;
++    memcpy(pseudo, packet + 26, 8);
++    pseudo[9] = IPPROTO_TCP;
++    pseudo[11] = 20;
++    memcpy(pseudo + 12, packet + 34, 20);
++    checksum(pseudo, sizeof(pseudo), packet + 50);
++    checksum(packet + 14, 20, packet + 24);
++    packets = 0;
++    reply_flags = 0;
++    slirp_input(slirp, packet, sizeof(packet));
++    so = slirp->tcb.so_next;
++    if (flags & TH_RST) {
++        assert(so == &slirp->tcb);
++        slirp_cleanup(slirp);
++        return;
++    }
++    assert(so != &slirp->tcb);
++    tp = so->so_tcpcb;
++    if (reopen) {
++        assert(tp->t_state == TCPS_SYN_RECEIVED);
++        assert(tp->rcv_nxt == sequence + 1);
++        assert(packets > 0 && (reply_flags & (TH_SYN | TH_ACK)) == (TH_SYN | TH_ACK));
++    } else {
++        assert(tp->t_state == TCPS_TIME_WAIT);
++        if (expect_ack) {
++            assert(packets > 0 && reply_flags == TH_ACK);
++            assert(reply_ack == previous);
++        }
++    }
++    slirp_cleanup(slirp);
++}
++
++int main(void)
++{
++    run_case(100000, 100001, TH_SYN, true, false);
++    run_case(100000, 110000, TH_SYN, true, false);
++    run_case(100000, 99999, TH_SYN, false, true);
++    run_case(100000, 100000, TH_SYN, false, true);
++    run_case(UINT32_MAX - 100, 100, TH_SYN, true, false);
++    run_case(100, UINT32_MAX - 100, TH_SYN, false, true);
++    run_case(100000, 110000, TH_SYN | TH_ACK, false, false);
++    run_case(100000, 110000, TH_SYN | TH_FIN, false, false);
++    run_case(100000, 110000, TH_SYN | TH_URG, false, false);
++    run_case(100000, 100001, TH_SYN | 0xc0, true, false); /* ECN negotiation */
++    run_case(100000, 100001, TH_SYN | TH_RST, false, false);
++    return 0;
++}

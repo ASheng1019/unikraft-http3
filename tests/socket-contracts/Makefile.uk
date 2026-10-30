@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: BSD-3-Clause
+$(eval $(call addlib,appcontracts))
+APPCONTRACTS_SRCS-y += $(APP_BASE)/main.c
+# Test-only internal loopback; consistent across every translation unit.
+CFLAGS-y += -DLWIP_NETIF_LOOPBACK=1 -DLWIP_HAVE_LOOPIF=1

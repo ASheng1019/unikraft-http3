@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: BSD-3-Clause
+$(eval $(call addlib,apprxflags))
+APPRXFLAGS_SRCS-y += $(APP_BASE)/../../app-nghttpx/main.c
+APPRXFLAGS_SRCS-y += $(APP_BASE)/udp_rxflags.c
+LDFLAGS-y += -Wl,--wrap=recvmsg -Wl,--wrap=ngtcp2_pkt_decode_version_cid

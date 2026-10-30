@@ -1,0 +1,57 @@
+[submodule "unikraft"]
+	path = unikraft
+	url = https://github.com/ASheng1019/unikraft.git
+[submodule "libs/lib-c-ares"]
+	path = libs/lib-c-ares
+	url = https://github.com/ASheng1019/lib-c-ares.git
+[submodule "libs/lib-libcxx"]
+	path = libs/lib-libcxx
+	url = https://github.com/ASheng1019/lib-libcxx.git
+[submodule "libs/lib-libcxxabi"]
+	path = libs/lib-libcxxabi
+	url = https://github.com/ASheng1019/lib-libcxxabi.git
+[submodule "libs/lib-libev"]
+	path = libs/lib-libev
+	url = https://github.com/ASheng1019/lib-libev.git
+[submodule "libs/lib-libunwind"]
+	path = libs/lib-libunwind
+	url = https://github.com/ASheng1019/lib-libunwind.git
+[submodule "libs/lib-lwip"]
+	path = libs/lib-lwip
+	url = https://github.com/ASheng1019/lib-lwip.git
+[submodule "libs/lib-musl"]
+	path = libs/lib-musl
+	url = https://github.com/ASheng1019/lib-musl.git
+[submodule "libs/lib-nghttp2"]
+	path = libs/lib-nghttp2
+	url = https://github.com/ASheng1019/lib-nghttp2.git
+[submodule "libs/lib-nghttp3"]
+	path = libs/lib-nghttp3
+	url = https://github.com/ASheng1019/lib-nghttp3.git
+[submodule "libs/lib-nghttpx"]
+	path = libs/lib-nghttpx
+	url = https://github.com/ASheng1019/lib-nghttpx.git
+[submodule "libs/lib-ngtcp2"]
+	path = libs/lib-ngtcp2
+	url = https://github.com/ASheng1019/lib-ngtcp2.git
+[submodule "libs/lib-openssl"]
+	path = libs/lib-openssl
+	url = https://github.com/ASheng1019/lib-openssl.git
+[submodule "libs/lib-zlib"]
+	path = libs/lib-zlib
+	url = https://github.com/ASheng1019/lib-zlib.git
+[submodule "app-nghttpx"]
+	path = app-nghttpx
+	url = https://github.com/ASheng1019/app-nghttpx.git
+[submodule "forks/nghttp2"]
+	path = forks/nghttp2
+	url = https://github.com/ASheng1019/nghttp2.git
+[submodule "forks/lwip"]
+	path = forks/lwip
+	url = https://github.com/ASheng1019/lwip.git
+[submodule "forks/ngtcp2"]
+	path = forks/ngtcp2
+	url = https://github.com/ASheng1019/ngtcp2.git
+[submodule "forks/libslirp"]
+	path = forks/libslirp
+	url = https://github.com/ASheng1019/libslirp.git
