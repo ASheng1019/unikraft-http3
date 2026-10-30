@@ -42,6 +42,41 @@ checkouts, initialize only unikraft/, libs/* and app-nghttpx/. The four forks/
 checkouts are not build inputs. Do not update submodules to floating branch
 heads when reproducing this version.
 
+## Local Git layout and maintenance
+
+The workspace is a normal repository with its Git metadata in the top-level
+`.git/`. Each dependency remains an independent Git submodule: its `.git`
+file points into the workspace's `.git/modules/` directory. This matches a
+normal recursive clone and keeps every module's branches, history and remotes
+separate. Git metadata must never live under build/, cache/ or another
+regenerable directory.
+
+Use ordinary Git commands from the workspace root:
+
+```sh
+git status
+git submodule status --recursive
+git -C libs/lib-nghttpx status
+```
+
+Make a module change on its own branch, commit and push that module first,
+then commit its new reference in the workspace. For example, after committing
+the service-port change:
+
+```sh
+git -C libs/lib-nghttpx push origin HEAD
+git add libs/lib-nghttpx
+git commit -m "Update the nghttpx service port"
+git push origin main
+```
+
+A fresh recursive clone checks out module commits directly; create or switch
+to the intended module branch before developing there. Keep build/cache
+outputs and private deployment files out of Git. To back up local work that
+has not been pushed, preserve the top-level `.git/` (including modules/) as
+well as uncommitted files; the workspace commit records module OIDs, not
+uncommitted module changes.
+
 ## Build
 
 Use ARM64 Linux with make, binutils, Clang19 or newer, flex, bison, Perl,
