@@ -212,10 +212,10 @@
   "version_policy": "Fixed releases with one removable backport per upstream fix; PR/commit provenance is recorded in the patch header.",
   "submission_series": {
     "lib-lwip": {
-      "base_branch": "dev/lwip-native-integration",
-      "base": "d6cf36b1b99804988b7d587f5ef4a272efbddc1a",
-      "policy_branch": "dev/lwip-ack-deadline",
-      "policy": "b20ebaf131ab15748bb38e06e4d8f27051a56ffd",
+      "base_branch": "dev/lwip-ipv6-setup-base",
+      "base": "1a4d8748707841e2c3b3db1ab2f72724a43a7cae",
+      "policy_branch": "dev/lwip-ipv6-setup",
+      "policy": "4bfdbdd4c62ee5f074fdd23ede431e8aaef721e5",
       "policy_commits": 1
     },
     "lib-ngtcp2": {
