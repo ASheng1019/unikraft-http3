@@ -30,7 +30,7 @@ def main():
                 file_overrides={'native-runtime.conf':b'control=10.0.2.15,4434\ntx-burst=8\n'})
         except RuntimeError:
             log=(rejected/'native-serial.log').read_text()
-            expected=('FAIL boot time/control configuration' in log and 'main returned 1' in log) if a.name else 'RUNTIME rejected key=tx-burst' in log
+            expected='RUNTIME rejected key=tx-burst' in log and 'main returned 1' in log
             if not expected:raise
         else:raise RuntimeError('default build enabled the experimental TX option')
         result['default_rejects_experimental_option']=True

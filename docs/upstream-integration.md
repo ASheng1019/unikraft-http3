@@ -3,71 +3,76 @@
 2026-10-31 的本地设计决定。本文确定拟采用的职责和投稿位置；不代表维护者已接受。
 本轮未发布 Discussion/issue/评论/PR。个人仓库继续作为可复现的集成入口。
 
-## 部署支持与服务端口的划分
+## 已落实的运行时归属
 
-当前 `app-nghttpx/main.c` → `uk_nghttpx_run()` 的薄入口保持不变。协议栈、后端代理、
-ACK 后响应内存回收仍复用上游。下列三处是部署能力的归属问题，不应以“QUIC 所需”
-为由扩展 ngtcp2/nghttp3 的职责，也不应把服务私有头导入 app。
+入口为 `main.c` → app `app_nghttpx_run()` → `uk_nghttpx_run(options)`。
+协议栈、TLS、后端代理、ACK 后内存回收仍复用上游；app 只配置部署支持。
 
-| 当前实现 | 归属决定 | 服务端口保留什么 | 投稿前的迁移要求 |
-|---|---|---|---|
-| `lib-nghttpx/Makefile.uk` 的三项 `--wrap`，`native_runtime.cc` 的 epoch/时钟实现 | 可信启动时间与 wrapper 启用由应用部署配置负责；通用 realtime/settime 由 core/POSIX time 负责 | 启动前检查服务所需 realtime 可用 | wrapper 必须显式启用，避免仅选择 HTTP/3 库就替整个镜像改时钟；可复用时间实现确定后再替换当前 adapter |
-| `native_network.c` 的 netif MLD/link-local/SLAAC/DAD | netif 能力属于 lib-lwip，静态地址与选哪块网卡属于应用部署配置 | 请求使用已经配置好的 POSIX 网络 | 先补 netdev multicast 能力契约，再迁移通用初始化；静态地址必须能指定接口，保留 TCP/IP 线程内修改及 DAD 等待 |
-| `native_runtime.cc` 的 token/UDP 控制口、drain、STATS | UDP 管理协议/token/STATS 属于应用部署支持；优雅退出属于 nghttpx 生命周期适配 | 调用上游 graceful-shutdown、销毁 watcher、限制单 worker 和 fatal VM exit | shutdown 与 STATS 分开可选；普通服务不应强制创建管理 UDP 口或携带 STATS FD 扫描；提供部署所需的 stop 触发方式 |
+| 实现位置 | 职责 | 可选性/Interface |
+|---|---|---|
+| app `clock.c`、`Makefile.deployment` | 从可信 epoch 锚定 realtime，提供三个全镜像 libc wrapper | APPNGHTTPX_BOOT_EPOCH 默认 n；关闭时不编译实现、不增加 --wrap；不属于 lib-nghttpx |
+| app `deployment.c` | 解析部署文件、选择网络接口、配置 QUIC options 与生命周期 hooks | 未选择功能的配置键明确拒绝；epoch 与 token 分别按需读取 |
+| app `control.c` | token/UDP 管理、drain 截止、可选统计及 FD 诊断 | CONTROL/SHUTDOWN/STATS/FD_STATS 独立选择，后两者依赖 CONTROL；FD_STATS 还依赖 STATS；均默认 n |
+| lwIP `ipv6.c`、`include/uk/lwip-ipv6.h` | 命名 netif 的 MLD/link-local/SLAAC/static 设置、TCP/IP 线程同步、DAD | LWIP_IPV6_SETUP 默认 n，依赖 threaded IPv6；地址、接口和 multicast 接收约定由调用者提供 |
+| nghttpx `native_runtime.cc`、`entry.cc`、patch0003 | 服务配置校验、realtime/C++ clock 一致性检查、worker 生命周期、graceful shutdown 和只读 worker 快照 | options 可为 NULL；无 hooks 时不创建管理 socket、不读部署文件；只暴露公开 C types 和 opaque handle |
 
-这些是后续迁移的明确接收边界，**本轮没有迁移运行时代码**，也未把“归属已定”写成
-“能力已经变成可选”。现有镜像仍要求 `/native-boot.txt` 中的 epoch+token，默认创建管理口；
-wrapper、IPv6 setup 和控制实现仍编译在 lib-nghttpx。这样保留已验证的部署契约，
-先让维护者评估平台接口，再进行会影响所有镜像的跨仓库迁移。
+app 的 defconfig/Kraftfile **显式**开启 epoch、CONTROL、SHUTDOWN、STATS、IPv6，保持演示可运行；
+这不是这些功能的 Kconfig 默认值。FD 扫描仍默认关闭。协议端口不会替应用选择上述功能。
+原 service `native_network.c` 和私有网络头已删除，源码补丁0003只调用生命周期 hook，
+不包含应用 UDP 管理协议。直接维护的 glue 不再伪装成第三方源码补丁。
 
-### 时钟：为什么不能直接删除 wrapper
+### 时钟：显式 provider，保留安全失败
 
-core `lib/posix-time/time.c` 的 `uk_sys_clock_gettime()` 将 realtime 交给
-`ukplat_wall_clock()`；当前 `uk_sys_clock_settime()` 是 `UK_WARN_STUBBED()` 后返回0，
-不能把“调用成功”当成已写入可信时间。现有 wrapper 用启动 epoch 加后续 monotonic 增量，
-让 TLS 证书校验、ticket 和上游 `std::chrono::system_clock` 使用一致的时间。
+core `uk_sys_clock_settime()` 仍是 stub，ARM64 generic timer 的 epoch offset 为0。
+未选择 app wrapper 时必须由其它 provider 提供有效 realtime；否则服务启动失败，
+不能因为 clock_settime 返回0就认为时间已校准。服务同时检查 C realtime 与 C++ system_clock。
+wrapper 只重锚 REALTIME/REALTIME_COARSE，MONOTONIC/QUIC timer 路径保持原时钟。
 
-`--wrap=clock_gettime/gettimeofday/time` 在最终链接生效，影响其它库对这三个符号的调用，
-不构成平台 RTC、NTP 或完整 POSIX 时钟实现，也不保证直接 syscall 等路径受其覆盖。
-归属不应是 OpenSSL、ngtcp2 或 nghttpx 的通用功能。与已有
-[native clock RFC #1953](https://github.com/orgs/unikraft/discussions/1953) 协调，
-但 adjtimex/timer 工作本身不等于已经提供首次可信启动时间。
+`/native-epoch.txt` 只含秒级 Unix epoch，独立于 `/native-control.token`。
+旧 `/native-boot.txt` 合并契约已经移除，不能用旧 initrd 运行新版 app。
+`--wrap=clock_gettime/gettimeofday/time` 由 app 选择，影响整镜像对这些符号的调用；
+它不是 RTC、NTP 或完整 POSIX clock discipline，也不覆盖所有直接 syscall 路径。
+继续与 [native clock RFC #1953](https://github.com/orgs/unikraft/discussions/1953) 协同。
 
-迁移验收：有部署 provider 时 TLS/系统时间一致，monotonic/QUIC 计时不受 realtime 修改影响；
-没有可信时间时明确失败；关闭 wrapper 时三个替代符号和链接选项确实消失；
-同一镜像不得再叠加两个 realtime provider。保留 epoch 文件作为当前可运行 adapter，
-不为仅一个部署凭空增加一套通用时钟框架。
+关闭 wrapper 的成功路径用独立 `tests/platform-clock-app` 验证真实 POSIX 调用与 TLS 后端校验。
+该镜像只在测试中替换 ukplat_wall_clock，不是新增的正式平台 RTC。
+链接符号检查确认三个 app wrapper 全部不存在；无 provider 时另测启动失败。
 
-### IPv6：通用能力与地址策略分开
+### IPv6：显式接口、通用同步和 multicast 接收契约
 
-当前 `native_network_init()` 通过 `tcpip_callback_with_block()` 修改 netif，并用 semaphore
-等回调完成后才释放栈上的参数；静态 IPv6 等待 DAD，最多约6秒。这些同步和生命周期条件
-必须保留，不能从应用线程直接改 lwIP 数据结构。
+`uk_lwip_ip6_configure(ifname, address, flags, timeout_ms)` 从应用线程调用，所有 netif 修改
+通过 tcpip_callback_with_block 在 TCP/IP 线程执行；回调完成前不释放栈参数。
+调用者必须指定接口，未找到、未 up 或不是 Ethernet 的接口返回 ENODEV，不选择首个活动设备。
+单 virtio 的合格配置为 en1（lwIP loopback 占据 index0）。
 
-当前 `uknetdev.c` 设置 BROADCAST/ETHARP/LINK_UP，但没有设置 MLD6，服务临时补了该 flag。
-这不能直接推广到所有 uknetdev：需确认驱动接收 multicast、MLD filter 的行为，并在
-lib-lwip 的 netif 初始化路径声明能力；不能让 HTTP/3 端口擅自宣布所有网卡都支持。
-link-local/SLAAC 可沿用 lwIP 的实现，应用只选启用方式和地址。现有“首个活动 Ethernet
-接口”选择仅适用于本轮单网卡镜像，不升级为通用多网卡 Interface。
+uknetdev 当前没有完整 multicast/filter 能力位，本轮没有虚构自动检测结果。
+`UK_LWIP_IP6_RX_MULTICAST` 是调用者对**指定接口**能接收 IPv6 multicast、无需硬件 filter
+回调的显式约定；app 的 `ipv6-multicast-rx=yes` 提供该约定。缺失时不擅自设置 MLD6，
+也不假定所有 uknetdev 都有能力。virtio 的实际收包通过双栈 ND/DAD 用例验证，其它设备仍须验证。
 
-迁移验收：双栈、IPv4-only/IPv6-only 编译，真实 ND/DAD/MLD 运行、重复地址失败、
-接口不存在/多接口选择和初始化超时。当前仅双栈单接口运行已覆盖；不要把编译矩阵称为运行验证。
-修改 port 自有 netif glue 直接提交 lib-lwip；修改下载的 lwIP 源码才组织为适配补丁。
+app 的 `ipv6-interface`、可选 `ipv6-address`/`ipv6-slaac`/`ipv6-dad-timeout-ms` 只表达部署选择。
+通用 helper 等待 link-local/static DAD；重复地址返回 EADDRINUSE，超时返回 ETIMEDOUT，
+配置不回滚，不能宣称失败后网络状态未变。SLAAC 初始化成功不代表已经取得全局地址。
+真实 Linux peer 的重复地址、未知接口、缺失接口/能力约定、非法 multicast 地址和超时已纳入回归。
+两版 lwIP 的 IPv4/IPv6/双栈/metadata 编译矩阵覆盖 helper 的 IPv6 构建；
+单栈、多物理网卡运行及所有设备的 multicast 接收仍不作资格声明。
 
-### shutdown 与 STATS：避免让观测成为必需的服务语义
+### shutdown/STATS：应用管理，服务只提供生命周期能力
 
-上游 `worker_process_event_loop()` 的 graceful-shutdown/连接清理适配留在
-`0003-service-lifecycle.patch`；触发 stop 的 token/UDP 协议属于部署控制。
-超时 drain 的 VM shutdown 只符合单服务/单进程镜像契约。
+`uk_nghttpx_options` 中 on_ready/on_close 必须成对；全部为 NULL 就没有应用管理端点。
+callbacks 在 event-loop 线程执行，opaque control handle 只能在 ready/close 生命周期内使用，
+不得跨线程或在关闭后保存。on_ready 失败须清理自身部分初始化。
+`uk_nghttpx_shutdown(handle)` 幂等地请求上游 graceful shutdown，
+`uk_nghttpx_get_stats(handle, snapshot)` 只暴露只读连接数，不导出私有 C++ 对象。
 
-STATS 当前将 context 转成 `shrpx::ConnectionHandler`，取得单 worker 计数、可选 allocator
-统计，还在 event-loop 线程扫描0..4095 FD。因此不能原样移到 app 并导出上游私有 C++ 头。
-迁移时由服务提供必要的只读统计快照；部署支持选择是否暴露它。FD 扫描属于显式诊断模式，
-默认关闭，不将 unavailable 的 allocator 数值当成已观测峰值。
+CONTROL 控制端点/token；SHUTDOWN 与 STATS 可以分别关闭，支持仅 shutdown、仅 STATS
+及全部关闭。端点至少要有一种命令。无 CONTROL 时不编译管理实现、不要求 token，
+由宿主 supervisor 结束 VM；测试中的宿主 teardown 不记作 guest graceful shutdown。
+仅 STATS 时省略 drain-seconds，发 stop 不会退出。正常 shutdown 仍保留有界 drain 和 watcher/FD 清理。
 
-迁移验收：无管理口也能启动与提供 H3，未启用 STATS 时没有扫描路径；启用时认证失败无副作用；
-正常 drain、持有连接到截止时间、重复 stop、watcher/FD 清理均验证。当前部署/故障回归覆盖
-现有强制管理模式，**未覆盖尚未实现的关闭管理模式**。
+FD_STATS 是独立诊断开关：未开时不存在4096项 fcntl 扫描，JSON 返回 fds=-1/scan_limit=0；
+开启后才执行扫描。allocator 未提供统计时保留 unavailable=-1，不将其当成实测峰值。
+链接/object 符号检查与实际认证/请求/退出测试一起验证，避免仅凭 UDP 无响应宣称代码被移除。
 
 ## 官方依赖和版本接收
 
@@ -79,7 +84,7 @@ LLVM/OpenSSL 更新和 socket 适配等尚需合并，固定 core 也仍带原�
 |---|---|---|
 | ARM64 core | [unikraft/unikraft](https://github.com/unikraft/unikraft) | 采用既有 #1875/#1876，保留作者与来源，不重复投稿 |
 | musl | [unikraft/lib-musl](https://github.com/unikraft/lib-musl) | 固定 release 归档获取/元数据 |
-| lwIP | [unikraft/lib-lwip](https://github.com/unikraft/lib-lwip) | 版本、独立 fixes、UDP 契约、TCP readiness、RX/checksum 分组；首轮止于 d6cf36b |
+| lwIP | [unikraft/lib-lwip](https://github.com/unikraft/lib-lwip) | 版本、独立 fixes、UDP 契约、TCP readiness、RX/checksum 分组；首轮止于1a4d874（新增独立 IPv6 helper 提交） |
 | C++ runtimes | [lib-libcxx](https://github.com/unikraft/lib-libcxx)、[lib-libcxxabi](https://github.com/unikraft/lib-libcxxabi)、[lib-libunwind](https://github.com/unikraft/lib-libunwind) | 沿用原 LLVM21 PR #38/#8/#13；本地元数据/配置修正作为后续 |
 | TLS | [unikraft/lib-openssl](https://github.com/unikraft/lib-openssl) | 协同 #12，3.5.9 及能力检测/加速增量独立评审 |
 | resolver/compression | [lib-c-ares](https://github.com/unikraft/lib-c-ares)、[lib-zlib](https://github.com/unikraft/lib-zlib) | 通用配置/构建和独立 contract 测试 |
@@ -139,11 +144,12 @@ CI smoke 使用 stock QEMU usernet；扩展测试应显式固定并声明宿主�
 
 ## 本轮验收和后续顺序
 
-先完成当前无策略版本的服务/故障注入回归，作为上述拆分之前的参考。新入口
+拆分前的无策略验证作为参考，拆分后的配置矩阵及服务回归另记于 validation。入口
 `tests/build-base-service.py` 导出固定的 base 提交，拒绝 dirty/mismatched 模块，所有输出另存；
 不切换、改写现有策略分支。`tests/run.py --profile base` 默认运行9项普通服务套件，
 明确排除2项自定义黑洞/冷却/再探测策略用例，且拒绝用 base profile 点选它们。
-两种故障注入另用各自镜像，不能把测试 wrapper 混入服务镜像。
+两种故障注入另用各自镜像，不能把测试 wrapper 混入服务镜像。新增 unmanaged、shutdown-only、
+stats-only、fd-stats、platform-clock 构建 profile，runtime-options 套件集中验证关闭功能后的行为。
 
 普通 PMTUD/fresh-connection MTU、ECN/DF 和1200字节配置仍由 wire/defaults 覆盖；
 排除的是既定自定义恢复行为，不是把基础 QUIC、IPv6 或全部 PMTU 验证跳过。
@@ -152,4 +158,4 @@ CI smoke 使用 stock QEMU usernet；扩展测试应显式固定并声明宿主�
 该保守模式有功能覆盖，尚无独立性能比较。
 
 完成结果见 [validation](../validation/README.md)。上游顺序仍是先 Ideas 讨论确认归属、
-仓库与 runner，再做跨库迁移及提交；本轮仅准备材料和验证，不执行对外发布。
+仓库与 runner，再按维护者意见调整已经准备好的跨库 Interface 并提交；本轮不执行对外发布。

@@ -223,3 +223,45 @@ QEMU usernet. These functional passes do not establish stock-usernet behavior
 under high-frequency faults, multi-worker support, multi-day stability, peak
 allocator usage or new performance results. No Linux VM comparison or native
 sanitizer rerun was performed in this round.
+
+## Deployment ownership and optional runtime support (2026-10-31)
+
+Runtime ownership is implemented, replacing the previous proposal-only state.
+The app owns Config.uk-selected epoch wrappers, UDP management, separate
+shutdown/STATS commands and optional FD scanning. nghttpx owns its profile,
+lifecycle hooks, opaque control handle and read-only worker counters; lwIP
+owns explicit named-interface IPv6 setup and DAD synchronization. Epoch and
+control credentials are now separate files. See the app README and
+[ownership document](../docs/upstream-integration.md) for contracts and limits.
+
+Initial fresh build/functional evidence is local under build/runtime-ownership/
+and build/runtime-variants/. The complete runtime-options suite passes 19/19:
+no management token/socket implementation when disabled; H3 small/large/POST,
+verified TLS and concurrent H2 origins; disabled/wrong-token commands;
+shutdown-only and STATS-only modes; explicit FD scans versus default no-scan;
+clock wrapper absence with an alternate test-only platform provider and
+verified TLS origin, missing provider/epoch failures; unknown/missing IPv6
+interface, missing multicast contract, invalid address, DAD timeout and
+link-local/SLAAC initialization. This does not qualify global SLAAC acquisition.
+
+The nine applicable ordinary service suites also pass. The first run completed
+seven suites and correctly rejected tx-burst, then stopped because the defaults
+test expected the old service-owned error message. Its assertion now checks
+the rejected key and failed boot. defaults/backend-faults pass in the new
+regression-tail output on the identical service image; no behavior was relaxed.
+The wire suite now also passes real DAD rejection of the Linux peer's address.
+Separate EAGAIN and RX-flags images, rebuilt with the actual app feature config,
+pass both fault tests. Profile verification detects dropped Kconfig includes;
+isolated test apps use $(UK_APP) when sourcing the shared app Config.uk.
+
+The IP-family/metadata compile matrix passes 12 selections/44 translation
+units: the original 36 socket/IP units plus the new helper in both pinned
+versions' IPv6 and dual-stack selections. A first attempt used a build cache
+without the 2.1 archive; rerunning against the verified archive cache completes
+all selections. This is compile coverage, not single-family runtime testing.
+
+The ACK deadline remains exactly one separate policy commit after the new
+IPv6 base. The Config.uk append conflict was resolved preserving both features;
+policy patches/lwipopts match the original strategy. ngtcp2 is unchanged.
+No new throughput/CPU/tail-latency or native sanitizer result is claimed.
+Further immutable-snapshot build checks are recorded below after completion.

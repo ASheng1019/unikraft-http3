@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: BSD-3-Clause
+$(eval $(call addlib,appplatformclock))
+NGHTTPX_APP_BASE := $(APP_BASE)/../../app-nghttpx
+include $(NGHTTPX_APP_BASE)/Makefile.deployment
+APPPLATFORMCLOCK_SRCS-y += $(NGHTTPX_APP_BASE)/deployment.c $(APP_BASE)/main.c
+LDFLAGS-y += -Wl,--wrap=ukplat_wall_clock

@@ -49,9 +49,14 @@ def main():
                     f'#undef CONFIG_LWIP_IPV{x}\n' for x in '46' if x not in family) +
                     '#undef CONFIG_LWIP_NETBUF_RECVINFO\n' +
                     ('#define CONFIG_LWIP_NETBUF_RECVINFO 1\n' if metadata else ''))
-                for filename in ['api/api_msg.c', 'api/sockets.c', 'core/udp.c']:
-                    entry = next(e for e in db if e['file'].endswith('/src/'+filename))
-                    old_source = str(Path(entry['file']).parents[2])
+                filenames = ['api/api_msg.c', 'api/sockets.c', 'core/udp.c']
+                if '6' in family:
+                    filenames.append('port/ipv6.c')
+                reference = next(e for e in db if e['file'].endswith('/src/api/api_msg.c'))
+                old_source = str(Path(reference['file']).parents[2])
+                for filename in filenames:
+                    suffix = '/lib-lwip/ipv6.c' if filename == 'port/ipv6.c' else '/src/'+filename
+                    entry = next(e for e in db if e['file'].endswith(suffix))
                     command = shlex.split(entry['command'])
                     index = command.index('-o')
                     del command[index:index+2]

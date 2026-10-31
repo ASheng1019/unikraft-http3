@@ -11,7 +11,30 @@ import subprocess
 
 LIBS = 'musl lwip nghttp3 ngtcp2 nghttp2 c-ares libev zlib openssl libcxx libcxxabi libunwind nghttpx'.split()
 APPS = {'service': 'app-nghttpx', 'eagain': 'tests/eagain-app',
-        'rxflags': 'tests/rxflags-app'}
+        'rxflags': 'tests/rxflags-app', 'unmanaged': 'app-nghttpx',
+        'shutdown-only': 'app-nghttpx', 'stats-only': 'app-nghttpx', 'fd-stats': 'app-nghttpx',
+        'platform-clock': 'tests/platform-clock-app'}
+OVERRIDES = {
+    'unmanaged': ['# CONFIG_APPNGHTTPX_CONTROL is not set',
+                  '# CONFIG_APPNGHTTPX_STATS is not set'],
+    'shutdown-only': ['# CONFIG_APPNGHTTPX_STATS is not set'],
+    'stats-only': ['# CONFIG_APPNGHTTPX_SHUTDOWN is not set'],
+    'fd-stats': ['CONFIG_APPNGHTTPX_FD_STATS=y'],
+}
+
+
+def check_profile(text, name):
+    expected = {
+        'BOOT_EPOCH': name != 'platform-clock',
+        'CONTROL': name not in ('unmanaged', 'platform-clock'),
+        'SHUTDOWN': name not in ('unmanaged', 'platform-clock', 'stats-only'),
+        'STATS': name not in ('unmanaged', 'platform-clock', 'shutdown-only'),
+        'FD_STATS': name == 'fd-stats',
+    }
+    for feature, enabled in expected.items():
+        symbol = 'CONFIG_APPNGHTTPX_' + feature + '=y'
+        assert (symbol in text) == enabled, (name, feature, enabled)
+    assert 'CONFIG_LWIP_TCP_ACK_DELAY_MS=' not in text
 
 
 def git(repo, *args):
@@ -29,7 +52,7 @@ def main():
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--compiler', default='clang-19')
     p.add_argument('--jobs', type=int, default=8)
-    p.add_argument('--apps', nargs='+', choices=list(APPS), default=list(APPS))
+    p.add_argument('--apps', nargs='+', choices=list(APPS), default=['service', 'eagain', 'rxflags'])
     p.add_argument('--fetch-command', help='optional make WGET command for a local archive cache')
     a = p.parse_args()
     if a.jobs < 1:
@@ -57,7 +80,7 @@ def main():
             if name != 'unikraft':
                 archive(repo, ref, snapshot / name)
         # Includes the two isolated test applications and their relative app source.
-        assert not git(root, 'status', '--porcelain', '--', 'tests/eagain-app', 'tests/rxflags-app')
+        assert not git(root, 'status', '--porcelain', '--', 'tests/eagain-app', 'tests/rxflags-app', 'tests/platform-clock-app')
         archive(root, 'HEAD:tests', snapshot / 'tests')
         for name in a.apps:
             case = output / name
@@ -65,7 +88,8 @@ def main():
             app = snapshot / APPS[name]
             conf = case / 'defconfig'
             conf.write_text('\n'.join(line for line in (app/'defconfig').read_text().splitlines()
-                                      if not line.startswith('CONFIG_LWIP_TCP_ACK_DELAY_MS=')) + '\n')
+                                      if not line.startswith('CONFIG_LWIP_TCP_ACK_DELAY_MS=')) + '\n' +
+                            '\n'.join(OVERRIDES.get(name, [])) + '\n')
             make = ['make', '-C', str(root/'unikraft'), f'A={app}', f'O={case}/out',
                     f'C={case}/config', f'UK_DEFCONFIG={conf}',
                     'L=' + ':'.join(str(snapshot/'libs'/('lib-'+n)) for n in LIBS),
@@ -77,7 +101,7 @@ def main():
                 with (case/log).open('x') as stream:
                     subprocess.run(make+args, stdout=stream, stderr=subprocess.STDOUT,
                                    check=True, timeout=900)
-            assert 'CONFIG_LWIP_TCP_ACK_DELAY_MS=' not in (case/'config').read_text()
+            check_profile((case/'config').read_text(), name)
             image = case/'out'/(app.name+'_qemu-arm64')
             assert image.is_file(), image
             result['images'][name] = str(image)

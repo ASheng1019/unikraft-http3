@@ -71,7 +71,7 @@ def main():
         client = ClientVM(root, link, files=files)
         host = '198.18.0.2' if args.family == 4 else 'fd00:1::2'
         conf = config(8080, idle='45s').replace('frontend=10.0.2.15,4433;quic', f'frontend={host},4433;quic').replace('backend=10.0.2.2,8080', 'backend=198.18.0.1,8080')
-        runtime = (b'control=198.18.0.2,4434\ndrain-seconds=5\nipv6-address=fd00:1::2\n'
+        runtime = (b'control=198.18.0.2,4434\ndrain-seconds=5\nipv6-interface=en1\nipv6-multicast-rx=yes\nipv6-address=fd00:1::2\n'
                    + (Path(__file__).parent.parent / 'app-nghttpx/recommended-runtime.conf').read_bytes())
         offloads = ('csum', 'guest_csum', 'gso', 'host_tso4', 'host_tso6', 'host_ecn', 'host_ufo')
         options = [v for prop in offloads for v in ['-global', f'virtio-net-device.{prop}=off']]

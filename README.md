@@ -116,10 +116,15 @@ integration; upstream core changes belong in the core repository itself.
 
 ## Deployment
 
-Supply a private initrd containing /nghttpx.conf, certificate/key, a trusted
-boot epoch and control token in /native-boot.txt, and optionally
-/native-runtime.conf. The startup contract is implemented in lib-nghttpx;
-the app calls only <nghttpx/unikraft.h>. Never commit keys, tokens or initrds.
+Supply a private initrd containing /nghttpx.conf and certificate/key.
+The app deployment profile explicitly selects trusted boot time
+(/native-epoch.txt), management (/native-control.token), shutdown and STATS.
+All are optional Config.uk features, default n; FD scans default off. The app
+owns /native-runtime.conf parsing, optional wrappers and the UDP management
+adapter. lib-nghttpx owns service validation, lifecycle callbacks and read-only
+worker snapshots. It adds no time wrappers or management socket by itself.
+See the [app README](app-nghttpx/README.md) for unmanaged/platform-clock modes,
+explicit IPv6 interface settings and teardown contracts. Never commit secrets.
 
 Recommended configuration: one worker/thread, epoll,16KiB backend reads,
 one-packet TX, PMTUD up to1452 bytes, ECN off, RX software checksums, deferred
@@ -218,6 +223,25 @@ select a local archive cache; otherwise normal make download rules apply.
 are explicitly excluded and rejected if selected. Upstream PMTUD/DF/ECN and
 conservative 1200-byte transfers still have wire coverage. The fault images
 add test wrappers only; production libraries come from the same snapshot.
+To build the complete deployment matrix, choose a new output and explicitly
+include all profiles (the default build remains service + two fault images):
+
+```sh
+RUNTIME_OUTPUT="$PWD/build/runtime-matrix"
+python3 tests/build-base-service.py --output "$RUNTIME_OUTPUT" \
+  --apps service unmanaged shutdown-only stats-only fd-stats platform-clock eagain rxflags
+python3 tests/run.py --profile base --suites runtime-options \
+  --runtime-variants "$RUNTIME_OUTPUT" \
+  --image "$RUNTIME_OUTPUT/service/out/app-nghttpx_qemu-arm64" \
+  --client-prefix "$CLIENT_PREFIX" --slirp-dir "$SLIRP_DIR" \
+  --output "$RUNTIME_OUTPUT/runtime-options-tests"
+```
+
+The platform-clock image supplies a test-only platform time provider; it does
+not implement an RTC. Runtime-options checks code exclusion, disabled commands,
+TLS/H3/H1/H2/POST transfers, clock-provider success/failure and named-interface
+IPv6 error paths. The ordinary wire suite additionally checks actual DAD
+rejection against the Linux peer's IPv6 address.
 
 See [upstream integration](docs/upstream-integration.md) for the proposed
 clock/network/control ownership, official dependency locations and native

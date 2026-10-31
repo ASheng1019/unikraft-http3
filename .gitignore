@@ -40,3 +40,6 @@ tools/nghttp2-ci/*
 !tools/lwip-ci/
 tools/lwip-ci/*
 !tools/lwip-ci/manifest.json
+tests/platform-clock-app/.config*
+tests/platform-clock-app/.unikraft/
+tests/platform-clock-app/build/

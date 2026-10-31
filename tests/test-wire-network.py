@@ -15,7 +15,7 @@ def main():
         conf=config(8080,idle='10s',extra='frontend=fd00:1::2,4433;quic\nworker-frontend-connections=64\n')
         conf=conf.replace('log-level=NOTICE','log-level=INFO')
         conf=conf.replace('frontend=10.0.2.15,4433;quic','frontend=198.18.0.2,4433;quic').replace('backend=10.0.2.2,8080','backend=198.18.0.1,8080')
-        runtime=b'control=198.18.0.2,4434\ndrain-seconds=10\nipv6-address=fd00:1::2\necn=yes\npmtud=yes\nmax-udp-payload=1452\n'
+        runtime=b'control=198.18.0.2,4434\ndrain-seconds=10\nipv6-interface=en1\nipv6-multicast-rx=yes\nipv6-address=fd00:1::2\necn=yes\npmtud=yes\nmax-udp-payload=1452\n'
         if a.tx_burst!=1:runtime+=f'tx-burst={a.tx_burst}\n'.encode()
         native=NativeService(root,8080,tag='expanded',guest_address='198.18.0.2',static_cidr='198.18.0.2/24',wire=(link.native_port,link.to_native),file_overrides={'nghttpx.conf':conf.encode(),'native-runtime.conf':runtime})
         result['image_sha256']=hashlib.sha256(native.image.read_bytes()).hexdigest()
@@ -86,6 +86,21 @@ def main():
         if code:raise RuntimeError('wildcard control send failed')
         native.process.wait(timeout=12)
         if 'main returned 0' not in native.log_path.read_text():raise RuntimeError('wildcard shutdown failed')
+        native.close();native=None
+        # DAD must reject the address already owned by the real Linux peer.
+        duplicate=root/'duplicate-address';duplicate.mkdir(mode=0o700)
+        for f in ['server.pem','server.key','ca.pem']:
+            (duplicate/f).write_bytes((root/f).read_bytes());(duplicate/f).chmod(0o600)
+        bad_runtime=runtime.replace(b'ipv6-address=fd00:1::2',b'ipv6-address=fd00:1::1')
+        try:
+            native=NativeService(duplicate,8080,tag='expanded',guest_address='198.18.0.2',static_cidr='198.18.0.2/24',wire=(link.native_port,link.to_native),file_overrides={'nghttpx.conf':conf.encode(),'native-runtime.conf':bad_runtime})
+        except RuntimeError:
+            log=(duplicate/'native-serial.log').read_text()
+            if 'IPV6 failed status=-98' not in log or 'NATIVE_NGHTTPX READY' in log:
+                raise RuntimeError('duplicate IPv6 address not rejected by DAD')
+            result['cases'].append({'name':'ipv6-duplicate-address','status':'PASS'})
+        else:
+            raise RuntimeError('duplicate IPv6 address unexpectedly accepted')
         result['status']='PASS';print('WIRE_NETWORK PASS',flush=True)
     except Exception as error:result['error']=str(error);raise
     finally:

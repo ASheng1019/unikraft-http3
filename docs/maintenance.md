@@ -40,7 +40,8 @@ OpenSSL3.5.9，以及成套 LLVM21.1.8 runtime。对齐的是修复实现和来�
 修改下载的第三方源码放进所属 port 的 `patches/`；修改平台 glue、构建规则、配置和公开头直接写 port 代码。
 通用正确性修复逐项独立，不与 Unikraft 适配、ACK 策略或其它修复合并。
 lwIP2.2.1 的应用顺序是 `common/` → `fixes/` → `native/`；各目录内按文件名排序。
-nghttpx 的0001/0002是独立通用修复；0003处理服务生命周期和配置边界，0004处理 QUIC 数据报 I/O、元数据和缓冲区限制。
+nghttpx 的0001/0002是独立通用修复；0003处理服务生命周期/hooks和配置边界，0004处理 QUIC 数据报 I/O、元数据和缓冲区限制。
+app 的 clock/control/deployment 源码直接维护，不是第三方补丁；IPv6 通用 helper 直接维护在 lwIP port。
 ACK 后释放响应存储、HTTP 后端背压属于上游已有实现，不归为移植补丁。
 
 上游合并后，先升级到**实际包含该修复**的固定 release/commit，再删除对应修复补丁并干净重建。
@@ -69,12 +70,14 @@ RX dispatcher/校验分为独立逻辑提交；具体 PR 比较范围见 upstrea
 
 | Port | 首轮投稿终点 | 后续策略分支 |
 |---|---|---|
-| lib-lwip | dev/lwip-native-integration（d6cf36b，无 ACK deadline） | dev/lwip-ack-deadline（b20ebaf） |
+| lib-lwip | dev/lwip-ipv6-setup-base（1a4d874，无 ACK deadline） | dev/lwip-ipv6-setup（4bfdbdd） |
 | lib-ngtcp2 | dev/ngtcp2-base-port（1b95dc9，无 PMTU 补丁及 hook） | dev/ngtcp2-pmtu-recovery（0b3dc4a） |
 
 每个基础到策略分支的差异恰好一个提交，完整 OID 记录在 sources.lock.json。
 根工作区 gitlink 仍固定开发组合，以保留已验证的部署配置；不能把该累计分支直接作为首轮 PR。
 ngtcp2 的 Quinn 许可、来源说明、策略补丁和应用规则一起留在策略提交中，基础分支不携带这些文件。
+lwIP 新增的命名接口 IPv6 helper 是 d6cf36b 之后的独立提交；旧四组投稿范围保持不变。
+原 ACK 策略以保留来源的 cherry-pick 叠放，补丁及 lwipopts 内容与原策略逐项相同。
 已有主线 common 补丁（包括 TIME_WAIT 处理）保持原行为，不被算作本次新策略。
 
 ## 暂缓的工作

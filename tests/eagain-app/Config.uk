@@ -1,1 +1,1 @@
-# Test-only application; service dependencies selected in defconfig.
+source "$(UK_APP)/../../app-nghttpx/Config.uk"

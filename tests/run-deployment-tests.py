@@ -26,7 +26,7 @@ def main():
             record(name,options=options)
         if len(hashes)!=1:raise RuntimeError('configurations did not use the same image')
         result['image_sha256']=hashes.pop()
-        for name,overrides in [('zero-limit',{'nghttpx.conf':None}),('invalid-token',{'native-boot.txt':f'{int(time.time())} '.encode()+b'z'*64+b'\n'}),('trailing-boot-data',{'native-boot.txt':f'{int(time.time())} '.encode()+b'a'*64+b' extra\n'}),('invalid-drain',{'native-runtime.conf':b'drain-seconds=0\n'})]:
+        for name,overrides in [('zero-limit',{'nghttpx.conf':None}),('invalid-token',{'native-control.token':b'z'*64+b'\n'}),('trailing-epoch-data',{'native-epoch.txt':f'{int(time.time())} extra\n'.encode()}),('invalid-drain',{'native-runtime.conf':b'drain-seconds=0\n'})]:
             d=directory(name)
             if name=='zero-limit':
                 from quic_fixture import config

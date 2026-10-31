@@ -121,7 +121,7 @@ PMTU、ACK deadline 及 libslirp 实验本轮不新建策略 issue 或 PR，保�
 写法参考了 [#1945](https://github.com/orgs/unikraft/discussions/1945) 的用例→实现/环境→讨论问题，
 以及 [#1837](https://github.com/orgs/unikraft/discussions/1837) 的简短设计要点；不套企业联络/内部 MR 模板。
 
-app README/demo 已提交并推送至个人仓库（`e503664`），工作区同步固定该 app 提交。
+当前 app README/demo 由工作区 gitlink 固定，个人仓库提供复现入口。
 Discussion 仍为本地草稿；本轮不发布，也不向上游提交 PR。
 讨论后再按维护者建议创建一个跟踪 issue，当前不新建 backlog issue。
 
@@ -155,8 +155,9 @@ The design mostly follows the upstream libraries:
 - libev drives readiness/timers over the POSIX interfaces; lwIP provides
   the UDP/TCP sockets.
 
-The app itself just calls `uk_nghttpx_run()`. Startup and platform glue live
-in a separate nghttpx port, with the protocol libraries usable independently.
+The app prepares optional clock/network/management support, then calls
+`uk_nghttpx_run(options)`. The service port owns lifecycle hooks and opaque
+worker snapshots; protocol libraries remain usable independently.
 The ports use Config.uk/Makefile.uk; changes to downloaded upstream sources
 are carried as patches, and Unikraft glue is maintained directly in the ports.
 
@@ -188,7 +189,10 @@ service port. The current image includes a trusted boot epoch, lwIP-specific
 IPv6 setup and a small authenticated shutdown/STATS endpoint. I'd keep time,
 address and management choices in deployment support, move general netif
 initialization into the lwIP port, and retain graceful-shutdown hooks in nghttpx.
-That split is proposed here; the runtime code has not been relocated yet.
+The runtime code now follows that split: deployment choices are explicit
+app options, shutdown and STATS can be selected independently, FD scans default
+off, and the lwIP helper takes an explicitly named interface and multicast
+receive contract. The proposed interfaces still need maintainer review.
 
 Does this seem like a useful direction? In particular, is there existing work
 we should coordinate with, does this split between the libraries and the app
@@ -203,16 +207,18 @@ to live? I can adapt the submission series to the preferred layout.
 官方 [catalog-core/nginx](https://github.com/unikraft/catalog-core/tree/main/nginx)
 同样将应用构建、rootfs 和运行步骤与独立 library port 组合；应用没有大量 C 代码不是缺陷。
 
-- **保留的划分**：main.c 仅调用公开 C 接口；协议和代理实现复用上游，不移入 app；
+- **保留的划分**：main.c 调用 app 部署入口，由它准备公开 options，再调用服务 C Interface；
+  协议和代理实现复用上游，不移入 app；
   demo.py 只是主机演示工具，不进入 unikernel 镜像，不导入工作区 QA fixture。
 - **已补齐的复现入口**：app README 说明独立依赖工作区、干净输出构建、TLS 验证、initrd、
   后端及结果检查；不依赖本机私有工具路径，也不把所有开发 fork 当作构建输入。
-- **显式部署 Interface**：uk_nghttpx_run() 是一次性、阻塞的应用启动入口。小函数签名之外，
-  调用者还必须知道固定配置路径、可信 epoch、全镜像时钟 wrapper、副作用和退出语义；
-  这些已写入 README，不把单 worker 误写成整个 guest 只有一个线程。
-- **已确定本地归属方案**：可信启动时间/地址/UDP 管理由部署支持负责，通用 netif 能力归 lwIP，
-  graceful shutdown 保留在 nghttpx 生命周期适配。具体迁移、验收及与 native clock RFC 的协同见
-  [upstream-integration.md](upstream-integration.md)。本轮不迁移运行时代码；管理口/STATS 等尚未变成可选。
+- **显式部署 Interface**：uk_nghttpx_run(options) 是一次性、阻塞入口，要求调用者先配置网络与 realtime。
+  app 的 epoch wrapper、管理端点、shutdown、STATS 和 FD 扫描分别由 Kconfig 选择；
+  lib-nghttpx 不再隐式处理部署文件或替整镜像链接 wrapper。
+- **归属已在代码中落实**：时间 adapter/UDP 管理在 app，命名接口 IPv6 通用同步与 DAD 在 lwIP，
+  graceful shutdown/统计快照保留在 nghttpx。关闭管理功能可不带 token 启动；
+  保留上游 worker/buffer 生命周期。接口、multicast 约定及验证边界见
+  [upstream-integration.md](upstream-integration.md)，正式上游接收仍待维护者确认。
 - **正式接收位置已有具体建议**：八个既有官方 port 的 staging，五个拟建独立 port，
   catalog-core/nghttpx 原生示例及 test 分支集成入口。API/runner 的核对结果及尚需维护者配置的
   ARM64/KVM runner、新库 URL/dispatch 见上述集成文档。无策略完整适用回归单独记入 validation；
@@ -420,7 +426,7 @@ libev. The original licensing choices are retained.
 
 ```text
 Provide a single-worker ARM64 nghttpx service through the public C entrypoint
-uk_nghttpx_run(). Reuse upstream QUIC/HTTP/3, TLS, backend proxying, buffering
+uk_nghttpx_run(options). Reuse upstream QUIC/HTTP/3, TLS, backend proxying, buffering
 and ACK-driven reclamation; maintain Unikraft startup/network glue in the
 port and carry changes to downloaded upstream sources as separate patches.
 
@@ -612,7 +618,7 @@ this PR must show only the agreed follow-up delta.
 标题：**Add a native nghttpx HTTP/3 reverse-proxy application**
 
 ```text
-Add a thin application calling uk_nghttpx_run(), a reproducible ARM64 source
+Add a thin application calling uk_nghttpx_run(options), a reproducible ARM64 source
 build profile and deployment instructions. Protocol/service implementation
 stays in the library ports. Configuration, certificates, keys and the trusted
 boot/control data are supplied privately at deployment time.

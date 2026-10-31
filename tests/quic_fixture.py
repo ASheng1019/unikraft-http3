@@ -175,8 +175,9 @@ class NativeService:
     def __init__(self, root, backend_port, *, instrumented=False, cpu=None, file_overrides=None,
                  tag="", guest_address="10.0.2.15", guest_port=4433, control_port=None,
                  connection_limit=16, static_cidr=None, drain_seconds=15, extra_config="", wire=None,
-                 qemu_options=(), startup_timeout=15, network_fd=None):
+                 qemu_options=(), startup_timeout=15, network_fd=None, managed=True):
         self.root = root
+        self.managed = managed
         self.front, self.control = free_udp(), free_udp()
         self.token = secrets.token_hex(32)
         select_fresh=tag=="expanded" and os.environ.get("QUIC_EXPANDED_FRESH")=="1"
@@ -191,8 +192,10 @@ class NativeService:
         self.config = self.config.replace("frontend=10.0.2.15,4433;quic", f"frontend={guest_address},{guest_port};quic")
         files = {"nghttpx.conf": self.config.encode(), "server.pem": (root / "server.pem").read_bytes(),
                  "server.key": (root / "server.key").read_bytes(),
-                 "native-boot.txt": f"{int(time.time())} {self.token}\n".encode()}
-        if tag:
+                 "native-epoch.txt": f"{int(time.time())}\n".encode()}
+        if managed:
+            files["native-control.token"] = (self.token+"\n").encode()
+        if tag and managed:
             files["native-runtime.conf"] = f"control={guest_address},{control_port}\ndrain-seconds={drain_seconds}\n".encode()
         profile = os.environ.get('QUIC_NATIVE_RUNTIME_PROFILE')
         if profile is not None:
@@ -282,6 +285,8 @@ class NativeService:
         raise RuntimeError("native connections did not drain")
 
     def stop(self):
+        if not self.managed:
+            raise RuntimeError("unmanaged guests require host-side teardown")
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.sendto(self.token.encode(), ("127.0.0.1", self.control))
         code = self.process.wait(timeout=25)

@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 SCRIPTS = {
+    'runtime-options': ('test-runtime-options.py', []),
     'rx-checksums': ('test-rx-checksum.py', []),
     'rx-flags': ('test-rx-flags.py', []),
     'eagain': ('test-eagain.py', []),
@@ -26,7 +27,7 @@ SCRIPTS = {
 }
 
 POLICY_SUITES = {'pmtu4', 'pmtu6'}
-INJECTOR_SUITES = {'eagain', 'rx-flags'}
+INJECTOR_SUITES = {'eagain', 'rx-flags', 'runtime-options'}
 
 
 def sha(path):
@@ -42,11 +43,14 @@ def main():
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--profile', choices=['development', 'base'], default='development',
                    help='base excludes the custom PMTU black-hole recovery contract')
+    p.add_argument('--runtime-variants', type=Path, help='build directory containing runtime profile images')
     p.add_argument('--suites', nargs='+', choices=list(SCRIPTS))
     a = p.parse_args()
     if a.suites is None:
         a.suites = [n for n in SCRIPTS if n not in INJECTOR_SUITES and
                     (a.profile != 'base' or n not in POLICY_SUITES)]
+    if 'runtime-options' in a.suites and not a.runtime_variants:
+        p.error('--runtime-variants required for runtime-options')
     if a.profile == 'base' and POLICY_SUITES.intersection(a.suites):
         p.error('base profile has no custom PMTU black-hole recovery; use the development image/profile')
     a.image = a.image.resolve(strict=True)
@@ -71,6 +75,8 @@ def main():
     try:
         for name in a.suites:
             script, args = SCRIPTS[name]
+            if name == 'runtime-options':
+                args = args + ['--variants', str(a.runtime_variants.resolve())]
             with (a.output/(name+'.log')).open('x') as stream:
                 run = subprocess.run([sys.executable, str(Path(__file__).with_name(script)), *args],
                                      env=env, stdout=stream, stderr=subprocess.STDOUT, timeout=450)
