@@ -138,6 +138,7 @@ Git 元数据不放在 `build/` 或缓存目录中。此次从临时发布目录
 ## 上游接收规划
 
 具体投稿对象、现有 PR 重合关系、先 Ideas Discussion/直接 PR 的判断、尚待整改项及英文草稿，
-集中维护在 [upstream-plan.md](upstream-plan.md)。个人仓库已发布不代表所有组合分支
-已具备直接投稿条件；尤其 ngtcp2 基础 port 的策略边界、c-ares/zlib 通用配置和元数据、
-lwIP 提交拆分仍须准备。已有 PR 的正文只在 GitHub 维护，不保存重复快照。
+集中维护在 [upstream-plan.md](upstream-plan.md)。策略边界、c-ares/zlib 通用配置和 lwIP
+提交拆分已经整理；个人仓库已发布仍不代表累计开发分支可以直接投稿。应用部署能力的归属、
+正式依赖和 catalog/CI 接收方案见 [upstream-integration.md](upstream-integration.md)。
+已有 PR 的正文只在 GitHub 维护，不保存重复快照。

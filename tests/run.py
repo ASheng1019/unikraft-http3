@@ -25,6 +25,10 @@ SCRIPTS = {
     'pmtu6': ('test-pmtu.py', ['--tag', 'standard', '--family', '6', '--attempt', 'a1']),
 }
 
+POLICY_SUITES = {'pmtu4', 'pmtu6'}
+INJECTOR_SUITES = {'eagain', 'rx-flags'}
+
+
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -36,8 +40,15 @@ def main():
     p.add_argument('--linux-image', type=Path, help='ARM64 Linux Image for Ethernet tests')
     p.add_argument('--slirp-dir', type=Path, help='optional explicitly selected libslirp.so.0')
     p.add_argument('--output', type=Path, required=True)
-    p.add_argument('--suites', nargs='+', choices=list(SCRIPTS), default=[n for n in SCRIPTS if n not in ('eagain', 'rx-flags')])
+    p.add_argument('--profile', choices=['development', 'base'], default='development',
+                   help='base excludes the custom PMTU black-hole recovery contract')
+    p.add_argument('--suites', nargs='+', choices=list(SCRIPTS))
     a = p.parse_args()
+    if a.suites is None:
+        a.suites = [n for n in SCRIPTS if n not in INJECTOR_SUITES and
+                    (a.profile != 'base' or n not in POLICY_SUITES)]
+    if a.profile == 'base' and POLICY_SUITES.intersection(a.suites):
+        p.error('base profile has no custom PMTU black-hole recovery; use the development image/profile')
     a.image = a.image.resolve(strict=True)
     a.client_prefix = a.client_prefix.resolve(strict=True)
     a.output = a.output.resolve()
@@ -52,7 +63,8 @@ def main():
                QUIC_NATIVE_RUNTIME_PROFILE='throughput')
     if a.linux_image: env['QUIC_TEST_LINUX_IMAGE'] = str(a.linux_image.resolve())
     if a.slirp_dir: env['QUIC_QEMU_SLIRP_DIR'] = str(a.slirp_dir.resolve())
-    result = dict(status='FAIL', image_sha256=sha(a.image), suites=[],
+    result = dict(status='FAIL', profile=a.profile, image_sha256=sha(a.image), suites=[],
+                  excluded_policy_suites=sorted(POLICY_SUITES) if a.profile == 'base' else [],
                   started_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                   client_sha256=sha(a.client_prefix/'bin/curl'),
                   allocator_statistics='unavailable in ordinary image; no heap-growth claim')

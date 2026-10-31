@@ -174,17 +174,21 @@ experimental PMTU black-hole recovery and TCP ACK-deadline work in the
 development composition. Those are separate commits and would be excluded
 from the initial port PRs; the policy-free ngtcp2 and lwIP branches have their
 own protocol/socket tests. The policy-free service also builds cleanly and
-passes the local TLS/HTTP/3-to-HTTP/1.1 demo. The policy-specific MTU results
-above belong to the development composition.
+passes all nine applicable ordinary service suites, separate EAGAIN/truncation
+fault images, and the local certificate-verified demo. The two custom PMTU
+recovery suites are excluded from that profile; their results above belong to
+the development composition.
 
 This builds on existing ARM64 fixes and the LLVM/OpenSSL port updates. I'd
 coordinate follow-ups with their authors rather than duplicate those changes.
 Generic nghttp2/lwIP correctness fixes are being handled separately too.
 
-A few platform details still deserve review: the current image uses a trusted
-boot epoch for realtime, lwIP-specific IPv6 setup and a small shutdown/control
-interface. I'd like feedback on where those should live before treating the
-service port as a general upstream interface.
+There are a few platform details I'd like to agree on before submitting the
+service port. The current image includes a trusted boot epoch, lwIP-specific
+IPv6 setup and a small authenticated shutdown/STATS endpoint. I'd keep time,
+address and management choices in deployment support, move general netif
+initialization into the lwIP port, and retain graceful-shutdown hooks in nghttpx.
+That split is proposed here; the runtime code has not been relocated yet.
 
 Does this seem like a useful direction? In particular, is there existing work
 we should coordinate with, does this split between the libraries and the app
@@ -206,13 +210,13 @@ to live? I can adapt the submission series to the preferred layout.
 - **显式部署 Interface**：uk_nghttpx_run() 是一次性、阻塞的应用启动入口。小函数签名之外，
   调用者还必须知道固定配置路径、可信 epoch、全镜像时钟 wrapper、副作用和退出语义；
   这些已写入 README，不把单 worker 误写成整个 guest 只有一个线程。
-- **投稿前需协调归属**：clock wrappers 的启用/时钟 provider、lwIP netif/IPv6 初始化、
-  强制控制 token 与 UDP shutdown/STATS 管理协议。尤其 FD 扫描等开发观测应明确是否可选，
-  不要求其它通用库依赖这些约定。本轮不擅自迁移它们；时钟部分可与现有
-  [native clock 讨论 #1953](https://github.com/orgs/unikraft/discussions/1953) 协同，不能假定该提案已经替代了启动 epoch。
-- **投稿前需补正式接收条件**：官方依赖仓库与 URL、native catalog 位置及 CI。首轮无 PMTU/ACK
-  策略的服务已干净构建并通过 demo，但完整无策略 HTTP/3 回归仍待补齐。单次 demo、
-  完整策略组合的 11 项回归和其它架构支持不能混称。
+- **已确定本地归属方案**：可信启动时间/地址/UDP 管理由部署支持负责，通用 netif 能力归 lwIP，
+  graceful shutdown 保留在 nghttpx 生命周期适配。具体迁移、验收及与 native clock RFC 的协同见
+  [upstream-integration.md](upstream-integration.md)。本轮不迁移运行时代码；管理口/STATS 等尚未变成可选。
+- **正式接收位置已有具体建议**：八个既有官方 port 的 staging，五个拟建独立 port，
+  catalog-core/nghttpx 原生示例及 test 分支集成入口。API/runner 的核对结果及尚需维护者配置的
+  ARM64/KVM runner、新库 URL/dispatch 见上述集成文档。无策略完整适用回归单独记入 validation；
+  不能沿用完整策略组合的11项结果。
 - **当前范围已经有实际用途**：单 worker 的 HTTP/3→TCP origin 代理是完整请求路径；
   无需为了展示工作量在 app 再写一套协议/代理，或先扩展到所有平台与多 worker。
 

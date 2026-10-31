@@ -150,9 +150,10 @@ python3 tests/run.py --image "$IMAGE" --client-prefix "$CLIENT_PREFIX" \
 
 Use a Python environment with aioquic1.3.0, an HTTP/3 curl/OpenSSL/nghttpd
 client prefix, a bootable ARM64 Linux Image and KVM-capable QEMU. These are
-explicit external QA tools. High-frequency backend tests require the selected
-libslirp TIME_WAIT fix. Client tools/kernels and benchmark artifacts are not
-part of any port source repository.
+explicit external QA tools. High-frequency backend tests use the explicitly
+selected experimental libslirp TIME_WAIT candidate, which still has known
+boundary gaps; these tests do not qualify stock QEMU for that load. Client
+tools/kernels and benchmark artifacts are not part of any port source repository.
 
 EAGAIN and receive-flags injectors live in separate test-only applications;
 they are excluded from the production build. Socket tests use test-only
@@ -187,6 +188,40 @@ PMTU recovery. Each policy is one separate final commit on its development
 branch. sources.lock.json records both endpoints under submission_series.
 Use run-ports.py --libs-root to qualify a separate snapshot of the base ports;
 the unmodified ngtcp2 transport has 266 tests, versus 297 with the policy patch.
+
+For the policy-free service and isolated send/receive fault images, use a new
+output directory and committed module inputs (no branch switching is needed):
+
+```sh
+BASE_OUTPUT="$PWD/build/base-service"
+python3 tests/build-base-service.py --output "$BASE_OUTPUT"
+python3 tests/run.py --profile base \
+  --image "$BASE_OUTPUT/service/out/app-nghttpx_qemu-arm64" \
+  --client-prefix "$CLIENT_PREFIX" --linux-image "$LINUX_IMAGE" \
+  --slirp-dir "$SLIRP_DIR" --output "$BASE_OUTPUT/ordinary"
+python3 tests/run.py --profile base --suites eagain \
+  --image "$BASE_OUTPUT/eagain/out/eagain-app_qemu-arm64" \
+  --client-prefix "$CLIENT_PREFIX" --slirp-dir "$SLIRP_DIR" \
+  --output "$BASE_OUTPUT/eagain-tests"
+python3 tests/run.py --profile base --suites rx-flags \
+  --image "$BASE_OUTPUT/rxflags/out/rxflags-app_qemu-arm64" \
+  --client-prefix "$CLIENT_PREFIX" --slirp-dir "$SLIRP_DIR" \
+  --output "$BASE_OUTPUT/rxflags-tests"
+```
+
+The builder exports lwIP/ngtcp2's fixed base endpoints from sources.lock.json,
+uses the workspace gitlinks for other inputs, removes the ACK policy selection,
+and records source identities in manifest.json. It refuses dirty/mismatched
+module checkouts and never rewrites developers' branches. `--fetch-command` can
+select a local archive cache; otherwise normal make download rules apply.
+`--profile base` runs nine ordinary suites; the two custom PMTU recovery suites
+are explicitly excluded and rejected if selected. Upstream PMTUD/DF/ECN and
+conservative 1200-byte transfers still have wire coverage. The fault images
+add test wrappers only; production libraries come from the same snapshot.
+
+See [upstream integration](docs/upstream-integration.md) for the proposed
+clock/network/control ownership, official dependency locations and native
+catalog/CI changes. These proposals have not been sent upstream.
 
 Current build and regression commands/results are described in
 [validation/README.md](validation/README.md). The retained Linux VM comparison

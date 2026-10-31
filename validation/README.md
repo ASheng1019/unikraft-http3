@@ -156,7 +156,70 @@ private directory/key permissions were checked. These basic demos used stock
 QEMU user networking, without the experimental libslirp preload used by the
 broader high-frequency fault tests. The default one-shot demo also passes.
 
-This is a public-interface reproduction check. It does not rerun all 11 service
-suites, qualify policy-free black-hole recovery, measure performance or claim
-multi-worker/other-architecture support. The full policy-free ordinary service
-regression subset and upstream CI remain submission preparation work.
+The demo is a public-interface reproduction check, not an 11-suite run, a
+performance measurement or a multi-worker/other-architecture qualification.
+The subsequent policy-free qualification is recorded separately below; the
+custom black-hole recovery contract remains specific to the policy branch.
+
+## Policy-free complete applicable qualification (2026-10-31)
+
+The app README/demo is published at app-nghttpx e503664, with workspace gitlink
+update 36fc2e2. The ownership/dependency/catalog/CI preparation is in
+[upstream-integration.md](../docs/upstream-integration.md). No upstream
+Discussion, issue, comment or PR was posted. Ownership here is a local design
+proposal: clock/network/control runtime implementations were not relocated,
+and management/STATS have not become optional.
+
+Fresh committed snapshots/builds are under build/base-qualification/. The new
+`tests/build-base-service.py` exports all port/app sources from workspace
+commits, substituting exactly the two base endpoints in sources.lock.json:
+
+- lib-lwip d6cf36b1b99804988b7d587f5ef4a272efbddc1a;
+- lib-ngtcp2 1b95dc975271a4bd56932ab579335a47965ee7c5.
+
+Core remains 20fd397 with the attributed ARM64 prerequisites. No development
+checkout/branch was switched. All three configs omit ACK deadline selection;
+ngtcp2's custom PMTU patch and application hook are absent. The manifest records
+the workspace/module commits; runner results record image identities, client
+identity, logs and actual start/end UTC timestamps. Images and private raw
+results remain local rather than being uploaded as source.
+
+| Fresh check | Result |
+|---|---|
+| Service + EAGAIN + RX-flags clean builds | 3/3 PASS, Clang19 ARM64 |
+| Ordinary policy-free service | 9/9 PASS; pmtu4/pmtu6 explicitly excluded (custom policy contracts) |
+| Isolated EAGAIN image | PASS: three failures, identical replayed datagram/metadata, large and next response, graceful shutdown |
+| Isolated RX-flags image | PASS: MSG_TRUNC/MSG_CTRUNC skipped, zero flagged parser calls, large and next response, graceful shutdown |
+| Standalone ngtcp2/nghttp3 | 266/266 and 61/61 PASS, zero skips |
+| lwIP metadata off/on socket contracts | 40+40 PASS; UDP DF/EMSGSIZE contracts PASS |
+| Base profile selection guard | PASS: explicitly selecting pmtu4 with --profile base is rejected before output creation |
+| Python syntax, Markdown local links/fences, diff whitespace | PASS |
+
+Ordinary coverage includes RX checksum rejection, deployment/config failure
+and bounded drain, discovery, HTTP/1.1 and HTTP/2 origins including TLS/DNS,
+session tickets/resumption, rebinding, actual dual-stack Ethernet, IPv4 DF,
+ECN feedback/bleaching, fresh-connection MTUs 1500→1280→1500, wildcard
+listeners and 1200-byte fallback, default settings and clear/TLS backend
+failure recovery. EAGAIN and RX-flags wrappers are in separate test-only
+applications; none are added to the ordinary service image.
+
+The two omitted suites pmtu4/pmtu6 assert the custom same-connection black-hole
+fallback, cooldown, restored large packets and second decrease. They remain
+policy-specific, **not passing tests of the unmodified ngtcp2 transport**.
+`tests/run.py --profile base` defaults to the nine applicable ordinary suites
+and records these two exclusions. It is a test selection label; source identity
+is established separately by the build manifest, not inferred from that label.
+
+An earlier independent pass of all nine suites is under
+build/base-service-regression/ using the first base-service image. The new
+snapshot run is authoritative for the reproducible builder. Full build/run
+commands are in the root README. Local cached builds additionally used
+`--fetch-command "python3 $PWD/tools/cache-fetch.py"`; that optional cache
+helper is not an upstream build prerequisite.
+
+Broader service runs explicitly selected tools/slirp/out's experimental host
+candidate; its known boundary gaps remain. The app-local basic demo used stock
+QEMU usernet. These functional passes do not establish stock-usernet behavior
+under high-frequency faults, multi-worker support, multi-day stability, peak
+allocator usage or new performance results. No Linux VM comparison or native
+sanitizer rerun was performed in this round.
