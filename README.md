@@ -187,7 +187,7 @@ LLVM/OpenSSL ports and Quinn attribution. Personal repository publication preser
 Upstream CI, maintainer agreement and policy acceptance remain submission steps.
 
 The workspace pins the measured development composition. Initial submission
-branches exclude behavior-policy commits: lib-lwip's dev/lwip-native-integration
+branches exclude behavior-policy commits: lib-lwip's dev/lwip-ipv6-setup-base
 has no independent ACK deadline; lib-ngtcp2's dev/ngtcp2-base-port has no custom
 PMTU recovery. Each policy is one separate final commit on its development
 branch. sources.lock.json records both endpoints under submission_series.

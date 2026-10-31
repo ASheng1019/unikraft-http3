@@ -69,7 +69,7 @@ Unikraft 官方要求一个 PR 聚焦一个主题，提交保留署名和 Signed
 4. nghttpx 截断输入可并行作为独立通用正确性 PR；与 Unikraft 新 port 审批无必然先后关系。
 5. 优先推进独立 nghttp3、ngtcp2 基础 port、libev/nghttp2，以及各依赖 port 的通用维护。
    ngtcp2 首版基础库不依赖 nghttpx；TLS helper 等待兼容的 OpenSSL 增量。
-6. 分批推进 lwIP socket/RX 能力；首轮投稿止于 dev/lwip-native-integration，不包含 ACK deadline。
+6. 分批推进 lwIP socket/RX 能力；首轮投稿止于 dev/lwip-ipv6-setup-base，不包含 ACK deadline。
 7. 依赖和承载方式明确后，提交 nghttpx 服务、native 应用和适合上游 CI 的集成子集。
 8. PMTU 恢复和 ACK deadline 等策略另开讨论；libslirp 候选继续留在个人实验分支。
 
@@ -427,23 +427,27 @@ libev. The original licensing choices are retained.
 ```text
 Provide a single-worker ARM64 nghttpx service through the public C entrypoint
 uk_nghttpx_run(options). Reuse upstream QUIC/HTTP/3, TLS, backend proxying, buffering
-and ACK-driven reclamation; maintain Unikraft startup/network glue in the
-port and carry changes to downloaded upstream sources as separate patches.
+and ACK-driven reclamation. Keep service validation/lifecycle glue in the
+port and carry downloaded-source changes as separate patches. Deployment
+time/network/control choices belong to the app; named-interface IPv6 mechanics
+are maintained in the lwIP port.
 
 Separate generic Retry/truncation backports from service lifecycle and QUIC
 datagram-I/O adaptation. Send individual UDP datagrams without GSO/GRO and
 preserve packet boundaries under backpressure. Keep IPv4 DF and address/
 traffic-class metadata consistent with the lwIP socket adapter.
 
-The qualified deployment uses a private initrd, trusted boot epoch, one
-worker and HTTP/1.1 or HTTP/2 origins. Clock wrappers affect the whole image
-and are an explicit integration contract. Multi-worker operation, 0-RTT,
+The qualified deployment uses a private initrd, one worker and HTTP/1.1 or
+HTTP/2 origins. Optional lifecycle callbacks expose an opaque shutdown/stats
+handle. The library adds no clock wrappers or management socket: it requires
+usable realtime and configured networking from the caller. Multi-worker operation, 0-RTT,
 QUIC DATAGRAM and WebTransport are outside the initial scope.
 
-The development composition passes 11 HTTP/3 regression suites, including
-real dual-stack Ethernet and repeated in-connection MTU changes. The final
-submission must distinguish standard PMTUD from the separately proposed
-black-hole recovery policy and revalidate its exact dependency combination.
+The policy-free service passes nine applicable HTTP/3 suites, including real
+dual-stack Ethernet and duplicate-address DAD rejection. A separate 19-case
+runtime matrix covers disabled management, independent shutdown/STATS and an
+alternate time provider. Custom black-hole/cooldown/re-probe results belong
+to the separate development policy and are excluded from the base profile.
 ```
 
 ### 7.6 Unikraft PR 的统一外层格式
@@ -525,9 +529,26 @@ Verify complete incoming packet checksums because this adapter does not
 consume checksum-offload metadata. Partial-checksum/GSO input is unsupported.
 ```
 
+**PR E：Add explicit named-interface IPv6 setup**
+
+```text
+Add optional LWIP_IPV6_SETUP for application-thread callers configuring an
+explicitly named Ethernet netif. Perform link-local/static/SLAAC operations
+on tcpip_thread and wait for DAD, retaining queued callback argument lifetime.
+Require existing MLD capability or an explicit receive-multicast contract;
+do not infer that every uknetdev receives multicast or choose the first NIC.
+
+Return negative errno for unavailable interfaces/capabilities, duplicate
+addresses and bounded DAD timeout. The helper does not load application
+configuration, provide time or expose management. Validate real dual-stack
+ND/DAD including a duplicate Linux peer address, error paths and both fixed
+lwIP versions' IP-family compile selections. Global SLAAC acquisition and
+other devices/multiple physical interfaces remain separate qualification.
+```
+
 **暂缓策略：Add an opt-in independent TCP ACK deadline**
 
-仅保留在一个独立后续提交中，不进入 A–D 的任何 PR。默认关闭，开发应用继续选择 50ms；
+仅保留在一个独立后续提交中，不进入 A–E 的任何 PR。默认关闭，开发应用继续选择 50ms；
 以后讨论计时器所有权、取消与现有 TCP timers 的关系，再决定投稿。
 ngtcp2 PMTU 策略同样保留为基础 port 之后的独立提交。
 
@@ -539,11 +560,12 @@ ngtcp2 PMTU 策略同样保留为基础 port 之后的独立提交。
 | B | 8935f6f..3c4e35d | 地址复制边界、UDP ancillary data、DF/EMSGSIZE，三个逻辑提交 |
 | C | 3c4e35d..a34ae8c | 持久 TCP readiness，一个提交 |
 | D | a34ae8c..d6cf36b | RX dispatcher、软件校验，各一个提交及配套说明 |
-| 暂缓 | d6cf36b..b20ebaf | ACK deadline，一个独立策略提交，首轮排除 |
+| E | d6cf36b..1a4d874 | 显式命名接口的 IPv6 通用同步/MLD/DAD helper，直接 port 代码 |
+| 暂缓 | 1a4d874..4bfdbdd | ACK deadline，一个独立策略提交，首轮排除；原补丁与来源保留 |
 
 A 的固定源码终点另有 dev/lwip-pinned-releases；包含回移的 A 终点为
 dev/lwip-release-backports。B、C 和 D 的终点分别为 dev/lwip-udp-socket-contracts、
-dev/lwip-tcp-readiness、dev/lwip-native-integration。完整提交号记录在 sources.lock.json
+dev/lwip-tcp-readiness、dev/lwip-native-integration；E 为 dev/lwip-ipv6-setup-base。完整提交号记录在 sources.lock.json
 及个人仓库；历史大提交仍可追溯，但不再作为投稿序列使用。
 
 已在 Unikraft 原基线存在的 common/ TIME_WAIT 处理保持原样；不能把保留旧行为称为新引入的策略。
@@ -620,8 +642,11 @@ this PR must show only the agreed follow-up delta.
 ```text
 Add a thin application calling uk_nghttpx_run(options), a reproducible ARM64 source
 build profile and deployment instructions. Protocol/service implementation
-stays in the library ports. Configuration, certificates, keys and the trusted
-boot/control data are supplied privately at deployment time.
+stays in the library ports. The app owns explicit optional epoch wrappers,
+management, independent shutdown/STATS and diagnostic FD scans. It passes
+named-interface deployment choices to lwIP and lifecycle hooks to nghttpx.
+Configuration/credentials are private deployment inputs, required only by
+the features actually selected; an unmanaged service does not need a token.
 
 The application has passed clean-build, HTTP/3 origin proxying, dual-stack
 wire, failure-recovery and MTU-change regressions in the pinned workspace.

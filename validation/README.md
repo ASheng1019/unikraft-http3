@@ -264,4 +264,28 @@ The ACK deadline remains exactly one separate policy commit after the new
 IPv6 base. The Config.uk append conflict was resolved preserving both features;
 policy patches/lwipopts match the original strategy. ngtcp2 is unchanged.
 No new throughput/CPU/tail-latency or native sanitizer result is claimed.
-Further immutable-snapshot build checks are recorded below after completion.
+The immutable-snapshot build checks and outcomes follow below.
+
+Immutable-source follow-up uses workspace f428826, app 61259d9, service port
+88571cd and policy-free lwIP 1a4d874. tests/build-base-service.py exports these
+committed inputs under build/runtime-frozen/, with separate service/unmanaged
+outputs; both clean builds PASS and their Config.uk feature assertions PASS.
+The app-local demo passes CA/hostname verification, H3→H1 and authenticated
+clean shutdown on the new service image using stock QEMU usernet. The new
+unmanaged image passes verified small/large H3 responses without a token;
+its teardown is explicitly host-side, not a graceful guest exit.
+
+The retained development composition (lwIP 4bfdbdd with ACK=50 plus the
+unchanged ngtcp2 PMTU policy) also builds and passes the stock-usernet demo.
+Its IPv4 and IPv6 PMTU policy suites each complete 80 same-connection transfers
+through decrease, cooldown, large-packet recovery and a second decrease.
+Those policy results are separate from the nine-suite base qualification.
+The first development build invocation omitted this host's tools/run.sh PATH
+setup and stopped before target compilation; the corrected invocation builds
+successfully. No compiler or source workaround was added for that host setup.
+
+Python syntax, Markdown fences/local links, app defconfig/Kraftfile feature
+agreement and Git whitespace checks PASS. Runtime code/configuration and new
+glue are committed in their owning repositories; no Discussion or upstream PR
+has been published. The official dependency URLs/catalog/CI remain proposals,
+and no new perf or real platform-RTC qualification is inferred from these runs.

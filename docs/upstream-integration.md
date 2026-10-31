@@ -12,7 +12,7 @@
 |---|---|---|
 | app `clock.c`、`Makefile.deployment` | 从可信 epoch 锚定 realtime，提供三个全镜像 libc wrapper | APPNGHTTPX_BOOT_EPOCH 默认 n；关闭时不编译实现、不增加 --wrap；不属于 lib-nghttpx |
 | app `deployment.c` | 解析部署文件、选择网络接口、配置 QUIC options 与生命周期 hooks | 未选择功能的配置键明确拒绝；epoch 与 token 分别按需读取 |
-| app `control.c` | token/UDP 管理、drain 截止、可选统计及 FD 诊断 | CONTROL/SHUTDOWN/STATS/FD_STATS 独立选择，后两者依赖 CONTROL；FD_STATS 还依赖 STATS；均默认 n |
+| app `control.c` | token/UDP 管理、drain 截止、可选统计及 FD 诊断 | CONTROL/SHUTDOWN/STATS/FD_STATS 分别选择；SHUTDOWN/STATS 依赖 CONTROL，FD_STATS 依赖 STATS；均默认 n |
 | lwIP `ipv6.c`、`include/uk/lwip-ipv6.h` | 命名 netif 的 MLD/link-local/SLAAC/static 设置、TCP/IP 线程同步、DAD | LWIP_IPV6_SETUP 默认 n，依赖 threaded IPv6；地址、接口和 multicast 接收约定由调用者提供 |
 | nghttpx `native_runtime.cc`、`entry.cc`、patch0003 | 服务配置校验、realtime/C++ clock 一致性检查、worker 生命周期、graceful shutdown 和只读 worker 快照 | options 可为 NULL；无 hooks 时不创建管理 socket、不读部署文件；只暴露公开 C types 和 opaque handle |
 
