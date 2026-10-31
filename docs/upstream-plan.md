@@ -115,49 +115,106 @@ PMTU、ACK deadline 及 libslirp 实验本轮不新建策略 issue 或 PR，保�
 上面标为已完成的整理已经落实到独立分支；其余仍是投稿前的检查项。固定运行版本继续显式包含
 已测量的策略提交，首轮投稿分支排除它们；两种组合分开构建、验证和记录。
 
-## 4. 首个 Ideas Discussion：完整英文草稿
+## 4. 首个 Ideas Discussion：英文草稿（本地，未发布）
 
-目标：[unikraft/unikraft Discussions](https://github.com/unikraft/unikraft/discussions/new)，分类 Ideas。
-目前不新建 backlog issue；讨论明确后再创建一个跟踪 issue，引用此 Discussion 并列出分项 PR。
+目标：[Unikraft Discussions](https://github.com/unikraft/unikraft/discussions/new)，分类 Ideas。
+写法参考了 [#1945](https://github.com/orgs/unikraft/discussions/1945) 的用例→实现/环境→讨论问题，
+以及 [#1837](https://github.com/orgs/unikraft/discussions/1837) 的简短设计要点；不套企业联络/内部 MR 模板。
 
-标题：**[RFC] Native HTTP/3 reverse proxy support with ngtcp2, nghttp3 and nghttpx**
+app README/demo 已提交并推送至个人仓库（`e503664`），工作区同步固定该 app 提交。
+Discussion 仍为本地草稿；本轮不发布，也不向上游提交 PR。
+讨论后再按维护者建议创建一个跟踪 issue，当前不新建 backlog issue。
 
-```text
-I would like to contribute native HTTP/3 reverse-proxy support to Unikraft.
-The use case is a small VM terminating QUIC/TLS and forwarding requests to
-existing HTTP/1.1 or HTTP/2 origins, without requiring changes to the origins.
+标题：**Native HTTP/3 support with ngtcp2, nghttp3 and nghttpx**
 
-A working ARM64 implementation is available here:
-https://github.com/ASheng1019/unikraft-http3
-The workspace pins separate repositories for each port and the thin app.
+下面英文正文可以在个人仓库同步、链接核对完成后直接用于 Discussion：
 
-The implementation composes ngtcp2, nghttp3, the OpenSSL QUIC TLS helper,
-nghttpx, libev and lwIP using normal Unikraft library build rules. Current
-validation includes a clean GitHub checkout/build, HTTP/3 proxy/backend tests,
-IPv4/IPv6 wire tests, truncation checks, and in-connection MTU decrease and
-recovery. The qualified profile is ARM64/QEMU KVM with a single worker.
-Multi-worker operation, 0-RTT, QUIC DATAGRAM and WebTransport are outside this
-initial scope. These results do not claim a new Linux performance comparison.
+```markdown
+Hi all,
 
-I propose incremental contributions: independent library ports first, followed
-by the socket integration, nghttpx service port, and a native application with
-reproducible tests. Generic nghttp2/lwIP fixes remain separate from the ports.
-The first ngtcp2 base-port submission would exclude the provisional PMTU
-black-hole recovery policy carried by the development composition.
+I've been working on running an HTTP/3 reverse proxy natively on Unikraft,
+and I'd like to discuss how to bring it upstream.
 
-This builds on existing work, particularly core PRs #1875/#1876 and the LLVM
-21.1.8 / OpenSSL 3.5.x port updates. I would coordinate follow-up changes with
-their authors rather than resubmit those upgrades.
+The use case is a small VM that terminates QUIC/TLS and forwards requests to
+existing HTTP/1.1 or HTTP/2 origins. That lets an existing service offer
+HTTP/3 without adding QUIC to the origin itself. This is a source-built
+Unikraft application, using nghttpx as the proxy.
 
-Before preparing the port PR series, could maintainers advise on:
-1. Any existing or planned HTTP/3 effort this should coordinate with?
-2. Repository names and the preferred split between protocol ports and the
-   nghttpx service port?
-3. The appropriate native catalog/example and integration-test location?
-4. The preferred sequencing with the existing runtime and OpenSSL PRs?
+The working code is here: [HTTP/3 workspace](https://github.com/ASheng1019/unikraft-http3).
+The [app README](https://github.com/ASheng1019/app-nghttpx#readme) covers the pinned
+dependencies, build and a local demo. The demo starts an ordinary HTTP/1.1
+origin, boots Unikraft under QEMU/KVM and checks a certificate-verified
+HTTP/3 request and the response body.
+
+The design mostly follows the upstream libraries:
+
+- ngtcp2 handles QUIC transport; nghttp3 handles HTTP/3 and QPACK.
+- OpenSSL provides TLS/crypto, through ngtcp2's OpenSSL helper.
+- nghttpx handles the frontend, origin connections and response buffering.
+  Its existing flow control and ACK-driven buffer reclamation are retained.
+- libev drives readiness/timers over the POSIX interfaces; lwIP provides
+  the UDP/TCP sockets.
+
+The app itself just calls `uk_nghttpx_run()`. Startup and platform glue live
+in a separate nghttpx port, with the protocol libraries usable independently.
+The ports use Config.uk/Makefile.uk; changes to downloaded upstream sources
+are carried as patches, and Unikraft glue is maintained directly in the ports.
+
+The current working profile is ARM64/QEMU KVM with one application worker.
+The development composition passes clean builds and 11 HTTP/3 regression
+suites, including HTTP/1.1 and HTTP/2 origins, TLS session resumption, backend
+failure recovery, dual-stack networking and in-connection MTU changes.
+Multiple workers, other platforms, 0-RTT, QUIC DATAGRAM and WebTransport are
+follow-up work. These are functional results, not a new Linux performance
+comparison or a production qualification.
+
+I'd suggest contributing this in smaller pieces: the independent library
+ports and socket support, then nghttpx and a native example. There is also
+experimental PMTU black-hole recovery and TCP ACK-deadline work in the
+development composition. Those are separate commits and would be excluded
+from the initial port PRs; the policy-free ngtcp2 and lwIP branches have their
+own protocol/socket tests. The policy-free service also builds cleanly and
+passes the local TLS/HTTP/3-to-HTTP/1.1 demo. The policy-specific MTU results
+above belong to the development composition.
+
+This builds on existing ARM64 fixes and the LLVM/OpenSSL port updates. I'd
+coordinate follow-ups with their authors rather than duplicate those changes.
+Generic nghttp2/lwIP correctness fixes are being handled separately too.
+
+A few platform details still deserve review: the current image uses a trusted
+boot epoch for realtime, lwIP-specific IPv6 setup and a small shutdown/control
+interface. I'd like feedback on where those should live before treating the
+service port as a general upstream interface.
+
+Does this seem like a useful direction? In particular, is there existing work
+we should coordinate with, does this split between the libraries and the app
+make sense, and where would you prefer the new ports and native example/tests
+to live? I can adapt the submission series to the preferred layout.
 ```
 
-Discussion 的重点是可用性、已实现的边界、接收方式和协同；不要贴全部性能日志或一次请求接收所有补丁。
+### 4.1 应用设计评估与投稿条件
+
+结论：薄应用 + 独立 service/protocol ports 的方向合理，已有实现和可运行演示足以讨论；
+尚不能将整个个人工作区原样作为“已满足所有主线要求”的投稿。
+官方 [catalog-core/nginx](https://github.com/unikraft/catalog-core/tree/main/nginx)
+同样将应用构建、rootfs 和运行步骤与独立 library port 组合；应用没有大量 C 代码不是缺陷。
+
+- **保留的划分**：main.c 仅调用公开 C 接口；协议和代理实现复用上游，不移入 app；
+  demo.py 只是主机演示工具，不进入 unikernel 镜像，不导入工作区 QA fixture。
+- **已补齐的复现入口**：app README 说明独立依赖工作区、干净输出构建、TLS 验证、initrd、
+  后端及结果检查；不依赖本机私有工具路径，也不把所有开发 fork 当作构建输入。
+- **显式部署 Interface**：uk_nghttpx_run() 是一次性、阻塞的应用启动入口。小函数签名之外，
+  调用者还必须知道固定配置路径、可信 epoch、全镜像时钟 wrapper、副作用和退出语义；
+  这些已写入 README，不把单 worker 误写成整个 guest 只有一个线程。
+- **投稿前需协调归属**：clock wrappers 的启用/时钟 provider、lwIP netif/IPv6 初始化、
+  强制控制 token 与 UDP shutdown/STATS 管理协议。尤其 FD 扫描等开发观测应明确是否可选，
+  不要求其它通用库依赖这些约定。本轮不擅自迁移它们；时钟部分可与现有
+  [native clock 讨论 #1953](https://github.com/orgs/unikraft/discussions/1953) 协同，不能假定该提案已经替代了启动 epoch。
+- **投稿前需补正式接收条件**：官方依赖仓库与 URL、native catalog 位置及 CI。首轮无 PMTU/ACK
+  策略的服务已干净构建并通过 demo，但完整无策略 HTTP/3 回归仍待补齐。单次 demo、
+  完整策略组合的 11 项回归和其它架构支持不能混称。
+- **当前范围已经有实际用途**：单 worker 的 HTTP/3→TCP origin 代理是完整请求路径；
+  无需为了展示工作量在 app 再写一套协议/代理，或先扩展到所有平台与多 worker。
 
 ## 5. 现有 PR 的协作文本草稿
 

@@ -133,3 +133,30 @@ split-string warning for the multiline test-result message. The zlib cleanup
 commit passes with the upstream API CamelCase diagnostic excluded; those names
 are zlib's public API. These checks do not replace the final complete-series
 checkpatch/CI required before upstream submission.
+
+
+## App-local reproduction walkthrough (2026-10-31)
+
+The app README now documents fixed dependency checkout, build, private initrd,
+origin and client verification. Its tools/demo.py is host tooling only and
+imports no workspace QA fixture. The app changes are published in the personal
+repository at e503664; the workspace pins that commit. The Discussion remains
+a local draft and has not been posted upstream.
+
+Fresh local outputs are under build/app-readme/. The same app-local script was
+checked on both the retained development image and a freshly built policy-free
+image using dev/lwip-native-integration and dev/ngtcp2-base-port, with the ACK
+Kconfig selection removed from the latter's build profile. Both pass verified
+CA/hostname TLS, curl --http3-only negotiation, exact response-body checking,
+HTTP/1.1 origin handling and authenticated graceful guest shutdown.
+
+The policy-free image also passed the documented keep-running workflow with a
+second independent curl request and Ctrl-C. Existing-output rejection and
+private directory/key permissions were checked. These basic demos used stock
+QEMU user networking, without the experimental libslirp preload used by the
+broader high-frequency fault tests. The default one-shot demo also passes.
+
+This is a public-interface reproduction check. It does not rerun all 11 service
+suites, qualify policy-free black-hole recovery, measure performance or claim
+multi-worker/other-architecture support. The full policy-free ordinary service
+regression subset and upstream CI remain submission preparation work.
